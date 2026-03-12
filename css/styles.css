@@ -1,0 +1,416 @@
+/* ===== CSS-переменные Telegram ===== */
+:root {
+    /* Цвета из Telegram WebApp API */
+    --tg-theme-bg-color: #ffffff;
+    --tg-theme-text-color: #000000;
+    --tg-theme-hint-color: #999999;
+    --tg-theme-link-color: #2481cc;
+    --tg-theme-button-color: #2481cc;
+    --tg-theme-button-text-color: #ffffff;
+    --tg-theme-secondary-bg-color: #f5f5f5;
+    
+    /* Дополнительные переменные */
+    --accent-color: #2481cc;
+    --danger-color: #ff4444;
+    --success-color: #4caf50;
+    --border-radius: 12px;
+    --shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Темная тема */
+[data-theme="dark"] {
+    --tg-theme-bg-color: #1c1c1e;
+    --tg-theme-text-color: #ffffff;
+    --tg-theme-hint-color: #8e8e93;
+    --tg-theme-secondary-bg-color: #2c2c2e;
+    --shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* ===== Базовые стили ===== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+}
+
+html {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 16px;
+    height: 100%;
+    overflow: hidden;
+}
+
+body {
+    background-color: var(--tg-theme-bg-color);
+    color: var(--tg-theme-text-color);
+    height: 100%;
+    overflow: hidden;
+    position: fixed;
+    width: 100%;
+    transition: var(--transition);
+}
+
+.app-container {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* ===== Шапка ===== */
+.header {
+    background: var(--tg-theme-secondary-bg-color);
+    padding: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    flex-shrink: 0;
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--tg-theme-button-color);
+    color: var(--tg-theme-button-text-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    font-weight: bold;
+    box-shadow: var(--shadow);
+}
+
+.user-details h1 {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 2px;
+}
+
+.user-details p {
+    font-size: 13px;
+    color: var(--tg-theme-hint-color);
+}
+
+.theme-toggle {
+    background: var(--tg-theme-secondary-bg-color);
+    border: 2px solid var(--tg-theme-hint-color);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    font-size: 20px;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.theme-toggle:active {
+    transform: scale(0.95);
+}
+
+/* ===== Основной контент ===== */
+.main-content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 16px;
+    padding-bottom: 80px;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Скрытие скроллбара */
+.main-content::-webkit-scrollbar {
+    width: 0;
+}
+
+/* ===== Карточки ===== */
+.welcome-card {
+    background: linear-gradient(135deg, var(--tg-theme-button-color), #1a6bc4);
+    color: white;
+    padding: 24px;
+    border-radius: var(--border-radius);
+    margin-bottom: 20px;
+    box-shadow: var(--shadow);
+    animation: slideIn 0.5s ease-out;
+}
+
+.welcome-card h2 {
+    font-size: 24px;
+    margin-bottom: 8px;
+}
+
+.welcome-card p {
+    opacity: 0.9;
+    font-size: 15px;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ===== Сетка действий ===== */
+.actions-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-bottom: 24px;
+}
+
+.action-btn {
+    background: var(--tg-theme-secondary-bg-color);
+    border: none;
+    border-radius: var(--border-radius);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: var(--transition);
+    color: var(--tg-theme-text-color);
+    position: relative;
+    overflow: hidden;
+}
+
+.action-btn::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+}
+
+.action-btn:active::before {
+    width: 300px;
+    height: 300px;
+}
+
+.action-btn:active {
+    transform: scale(0.98);
+}
+
+.action-btn .icon {
+    font-size: 32px;
+    transition: transform 0.2s;
+}
+
+.action-btn:active .icon {
+    transform: scale(1.2);
+}
+
+.action-btn .label {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--tg-theme-hint-color);
+}
+
+/* ===== Секция счетчика ===== */
+.counter-section {
+    background: var(--tg-theme-secondary-bg-color);
+    padding: 20px;
+    border-radius: var(--border-radius);
+    text-align: center;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow);
+}
+
+.counter-section h3 {
+    font-size: 16px;
+    margin-bottom: 16px;
+    color: var(--tg-theme-hint-color);
+}
+
+.counter-display {
+    font-size: 64px;
+    font-weight: 700;
+    color: var(--tg-theme-button-color);
+    margin: 20px 0;
+    font-variant-numeric: tabular-nums;
+    transition: transform 0.1s;
+}
+
+.counter-display.pulse {
+    animation: pulse 0.3s ease-out;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+.counter-controls {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+}
+
+.counter-btn {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    border: none;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: var(--shadow);
+}
+
+.counter-btn.minus {
+    background: var(--danger-color);
+    color: white;
+}
+
+.counter-btn.plus {
+    background: var(--success-color);
+    color: white;
+}
+
+.counter-btn:active {
+    transform: scale(0.9);
+}
+
+/* ===== Информация о теме ===== */
+.theme-info {
+    background: var(--tg-theme-secondary-bg-color);
+    padding: 16px;
+    border-radius: var(--border-radius);
+    margin-bottom: 20px;
+}
+
+.theme-info h3 {
+    font-size: 14px;
+    margin-bottom: 12px;
+    color: var(--tg-theme-hint-color);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.theme-colors {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.color-chip {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: var(--tg-theme-bg-color);
+    border-radius: 20px;
+    font-size: 12px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.color-dot {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 2px solid rgba(0, 0, 0, 0.1);
+}
+
+/* ===== Нижняя навигация ===== */
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--tg-theme-bg-color);
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+    display: flex;
+    justify-content: space-around;
+    padding: 8px 0;
+    padding-bottom: env(safe-area-inset-bottom, 8px);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    z-index: 1000;
+}
+
+.nav-btn {
+    flex: 1;
+    border: none;
+    background: none;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    transition: var(--transition);
+    color: var(--tg-theme-hint-color);
+}
+
+.nav-btn span:first-child {
+    font-size: 24px;
+    transition: transform 0.2s;
+}
+
+.nav-btn span:last-child {
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.nav-btn.active {
+    color: var(--tg-theme-button-color);
+}
+
+.nav-btn.active span:first-child {
+    transform: translateY(-2px);
+}
+
+.nav-btn:active span:first-child {
+    transform: scale(0.9);
+}
+
+/* ===== Адаптивность ===== */
+@media (max-width: 380px) {
+    .actions-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .welcome-card h2 {
+        font-size: 20px;
+    }
+    
+    .counter-display {
+        font-size: 48px;
+    }
+}
+
+/* ===== Утилиты ===== */
+.hidden {
+    display: none !important;
+}
+
+.fade-in {
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
