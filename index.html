@@ -4,89 +4,44 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="format-detection" content="telephone=no">
-    <title>Мой Mini App</title>
+    <title>Список покупок</title>
     
-    <!-- Telegram Web App SDK -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    
     <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
     <div class="app-container">
-        <!-- Шапка с информацией о пользователе -->
         <header class="header">
-            <div class="user-info">
-                <div class="avatar" id="user-avatar">👤</div>
-                <div class="user-details">
-                    <h1 id="user-name">Загрузка...</h1>
-                    <p id="user-id">ID: --</p>
+            <div class="header-content">
+                <div class="title-section">
+                    <h1>🛒 Список покупок</h1>
+                    <p class="progress-text" id="progress-text">0 из 0 куплено</p>
                 </div>
+                <button class="theme-toggle" id="theme-toggle">🌓</button>
             </div>
-            <button class="theme-toggle" id="theme-toggle">🌓</button>
+            <div class="progress-bar-container">
+                <div class="progress-bar" id="progress-bar" style="width: 0%"></div>
+            </div>
         </header>
 
-        <!-- Основной контент -->
-        <main class="main-content">
-            <!-- Приветственная секция -->
-            <section class="welcome-card">
-                <h2>Добро пожаловать! 👋</h2>
-                <p>Это демо Mini App с полной интеграцией Telegram.</p>
-            </section>
+        <div class="add-form">
+            <input type="text" class="input-field" id="item-input" placeholder="Добавить товар..." maxlength="50">
+            <button class="add-btn" id="add-btn">+</button>
+        </div>
 
-            <!-- Интерактивные кнопки -->
-            <section class="actions-grid">
-                <button class="action-btn" id="btn-haptic">
-                    <span class="icon">📳</span>
-                    <span class="label">Вибрация</span>
-                </button>
-                <button class="action-btn" id="btn-popup">
-                    <span class="icon">💬</span>
-                    <span class="label">Показать Popup</span>
-                </button>
-                <button class="action-btn" id="btn-data">
-                    <span class="icon">📊</span>
-                    <span class="label">Мои данные</span>
-                </button>
-                <button class="action-btn" id="btn-share">
-                    <span class="icon">🔗</span>
-                    <span class="label">Поделиться</span>
-                </button>
-            </section>
-
-            <!-- Счетчик с анимацией -->
-            <section class="counter-section">
-                <h3>Интерактивный счетчик</h3>
-                <div class="counter-display" id="counter">0</div>
-                <div class="counter-controls">
-                    <button class="counter-btn minus" id="btn-minus">−</button>
-                    <button class="counter-btn plus" id="btn-plus">+</button>
-                </div>
-            </section>
-
-            <!-- Статус темы -->
-            <section class="theme-info">
-                <h3>Текущая тема</h3>
-                <div class="theme-colors" id="theme-colors">
-                    <!-- Цвета будут отображаться здесь -->
-                </div>
-            </section>
+        <main class="main-content" id="main-content">
+            <div class="empty-state" id="empty-state">
+                <div class="empty-icon">📝</div>
+                <h3>Список пуст</h3>
+                <p>Добавьте товары для покупки</p>
+            </div>
+            <div class="shopping-list hidden" id="shopping-list"></div>
         </main>
 
-        <!-- Нижняя навигация -->
-        <nav class="bottom-nav">
-            <button class="nav-btn active" data-page="home">
-                <span>🏠</span>
-                <span>Главная</span>
-            </button>
-            <button class="nav-btn" data-page="profile">
-                <span>👤</span>
-                <span>Профиль</span>
-            </button>
-            <button class="nav-btn" data-page="settings">
-                <span>⚙️</span>
-                <span>Настройки</span>
-            </button>
-        </nav>
+        <div class="bottom-actions">
+            <button class="clear-btn" id="clear-btn">Очистить всё</button>
+            <button class="share-btn" id="share-btn">Поделиться</button>
+        </div>
     </div>
 
     <script src="js/app.js"></script>
