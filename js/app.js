@@ -27,10 +27,7 @@ class CollaborativeShoppingList {
         this.initTheme();
         this.setupEventListeners();
         
-        // Загружаем или создаём список
         await this.loadOrCreateList();
-        
-        // Запускаем реальное время Firebase
         this.startRealtimeSync();
         
         this.render();
@@ -75,7 +72,6 @@ class CollaborativeShoppingList {
     }
 
     async loadOrCreateList() {
-        // Пробуем загрузить сохранённый listId
         try {
             const saved = await this.cloudStorageGet('current_list');
             if (saved) {
@@ -89,7 +85,6 @@ class CollaborativeShoppingList {
         if (!this.listId) {
             this.createNewList();
         } else {
-            // Загружаем данные из Firebase при старте
             await this.loadFromFirebase();
         }
     }
@@ -107,7 +102,6 @@ class CollaborativeShoppingList {
         this.pendingListId = null;
         this.saveListId();
         
-        // Загружаем текущие данные из Firebase
         await this.loadFromFirebase();
         
         this.showNotification('👥 Вы присоединились к списку!');
@@ -115,7 +109,6 @@ class CollaborativeShoppingList {
         this.updateShareInfo();
     }
 
-    // Загрузка из Firebase
     async loadFromFirebase() {
         if (!this.listId) return;
         
@@ -137,12 +130,11 @@ class CollaborativeShoppingList {
         }
     }
 
-    // Сохранение в Firebase
     async saveToFirebase() {
         if (!this.listId) return;
         
         const now = Date.now();
-        this.lastSavedAt = now; // Запоминаем, когда мы сохранили
+        this.lastSavedAt = now;
         
         const data = {
             items: this.items,
@@ -156,16 +148,14 @@ class CollaborativeShoppingList {
                 method: 'PUT',
                 body: JSON.stringify(data)
             });
-            this.lastUpdate = now; // Обновляем lastUpdate после успешного сохранения
+            this.lastUpdate = now;
             console.log('☁️ Сохранено в Firebase');
         } catch (e) {
             console.error('Ошибка сохранения:', e);
         }
     }
 
-    // Реальное время через polling
     startRealtimeSync() {
-        // Проверяем обновления каждые 2 секунды
         setInterval(async () => {
             if (!this.listId) return;
             
@@ -175,16 +165,12 @@ class CollaborativeShoppingList {
                 
                 if (!data || !data.items) return;
                 
-                // Важно: проверяем, что данные новее нашего последнего сохранения
-                // И что они изменились по сравнению с текущими
                 const serverTime = data.updatedAt || 0;
                 
-                // Если серверные данные старше или равны нашим последним сохранённым — пропускаем
                 if (serverTime <= this.lastSavedAt) {
                     return;
                 }
                 
-                // Проверяем, изменились ли данные реально
                 const newItemsJson = JSON.stringify(data.items);
                 const currentItemsJson = JSON.stringify(this.items);
                 
@@ -194,13 +180,10 @@ class CollaborativeShoppingList {
                     this.render();
                     this.showNotification('🔄 Список обновлён!', 1000);
                 }
-            } catch (e) {
-                // Игнорируем ошибки сети
-            }
+            } catch (e) {}
         }, 2000);
     }
 
-    // Локальное сохранение только listId
     cloudStorageGet(key) {
         return new Promise((resolve) => {
             if (!this.tg?.CloudStorage) {
@@ -238,11 +221,28 @@ class CollaborativeShoppingList {
         };
         
         this.items.unshift(item);
-        await this.saveToFirebase(); // Сохраняем в Firebase
+        await this.saveToFirebase();
         input.value = '';
         
         this.haptic('light');
         this.render();
+        this.updateCancelButton();
+    }
+
+    cancelInput() {
+        const input = document.getElementById('item-input');
+        input.value = '';
+        input.blur();
+        this.updateCancelButton();
+        this.haptic('light');
+    }
+
+    updateCancelButton() {
+        const input = document.getElementById('item-input');
+        const cancelBtn = document.getElementById('cancel-btn');
+        if (cancelBtn) {
+            cancelBtn.style.display = input.value.length > 0 ? 'flex' : 'none';
+        }
     }
 
     async toggleItem(id) {
@@ -252,7 +252,7 @@ class CollaborativeShoppingList {
             item.purchasedBy = item.purchased ? this.userId : null;
             item.purchasedByName = item.purchased ? this.userName : null;
             
-            await this.saveToFirebase(); // Сохраняем в Firebase
+            await this.saveToFirebase();
             this.haptic(item.purchased ? 'medium' : 'light');
             this.render();
         }
@@ -261,7 +261,7 @@ class CollaborativeShoppingList {
     async deleteItem(id, event) {
         event.stopPropagation();
         this.items = this.items.filter(i => i.id !== id);
-        await this.saveToFirebase(); // Сохраняем в Firebase
+        await this.saveToFirebase();
         this.haptic('rigid');
         this.render();
     }
@@ -279,7 +279,7 @@ class CollaborativeShoppingList {
         }, async (buttonId) => {
             if (buttonId === 'clear') {
                 this.items = [];
-                await this.saveToFirebase(); // Сохраняем в Firebase
+                await this.saveToFirebase();
                 this.haptic('success');
                 this.render();
             }
@@ -459,11 +459,18 @@ class CollaborativeShoppingList {
             addBtn.addEventListener('click', () => this.addItem());
         }
 
+        const cancelBtn = document.getElementById('cancel-btn');
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', () => this.cancelInput());
+        }
+
         const input = document.getElementById('item-input');
         if (input) {
             input.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') this.addItem();
             });
+            
+            input.addEventListener('input', () => this.updateCancelButton());
         }
 
         const themeBtn = document.getElementById('theme-toggle');

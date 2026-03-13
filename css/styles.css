@@ -308,6 +308,33 @@ body {
     -webkit-backdrop-filter: blur(10px);
 }
 
+.cancel-btn {
+    width: 48px;
+    height: 48px;
+    border: 2px solid var(--danger-color);
+    border-radius: var(--border-radius);
+    background: transparent;
+    color: var(--danger-color);
+    font-size: 20px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.cancel-btn:active {
+    background: var(--danger-color);
+    color: white;
+    transform: scale(0.95);
+}
+
+.cancel-btn.visible {
+    display: flex;
+}
+
 .clear-btn {
     flex: 1;
     padding: 14px;
