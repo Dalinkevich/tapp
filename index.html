@@ -4,43 +4,68 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="format-detection" content="telephone=no">
-    <title>Список покупок</title>
+    <title>Совместный список покупок</title>
     
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
     <div class="app-container">
+        <!-- Header с информацией о совместном доступе -->
         <header class="header">
             <div class="header-content">
                 <div class="title-section">
                     <h1>🛒 Список покупок</h1>
                     <p class="progress-text" id="progress-text">0 из 0 куплено</p>
                 </div>
-                <button class="theme-toggle" id="theme-toggle">🌓</button>
+                <div class="header-actions">
+                    <span class="sync-status" id="sync-status">🔄</span>
+                    <button class="theme-toggle" id="theme-toggle">🌓</button>
+                </div>
             </div>
             <div class="progress-bar-container">
                 <div class="progress-bar" id="progress-bar" style="width: 0%"></div>
             </div>
+            <!-- Информация о совместном списке -->
+            <div class="share-info" id="share-info" style="display: none;">
+                <span class="share-badge">👥 Совместный доступ</span>
+                <span class="users-count" id="users-count">1 человек</span>
+            </div>
         </header>
 
+        <!-- Форма добавления -->
         <div class="add-form">
             <input type="text" class="input-field" id="item-input" placeholder="Добавить товар..." maxlength="50">
             <button class="add-btn" id="add-btn">+</button>
         </div>
 
+        <!-- Основной контент -->
         <main class="main-content" id="main-content">
             <div class="empty-state" id="empty-state">
                 <div class="empty-icon">📝</div>
                 <h3>Список пуст</h3>
-                <p>Добавьте товары для покупки</p>
+                <p>Добавьте товары или присоединитесь к списку друга</p>
+                <button class="join-btn" id="join-btn" style="display: none;">Присоединиться к списку</button>
             </div>
             <div class="shopping-list hidden" id="shopping-list"></div>
         </main>
 
+        <!-- Нижние кнопки -->
         <div class="bottom-actions">
             <button class="clear-btn" id="clear-btn">Очистить всё</button>
             <button class="share-btn" id="share-btn">Поделиться</button>
+        </div>
+
+        <!-- Модальное окно присоединения -->
+        <div class="modal hidden" id="join-modal">
+            <div class="modal-content">
+                <h3>Присоединиться к списку?</h3>
+                <p>Вы увидите товары, которые добавил другой пользователь, и сможете отмечать их вместе.</p>
+                <div class="modal-actions">
+                    <button class="modal-btn secondary" id="modal-cancel">Отмена</button>
+                    <button class="modal-btn primary" id="modal-confirm">Присоединиться</button>
+                </div>
+            </div>
         </div>
     </div>
 
