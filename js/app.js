@@ -2,10 +2,8 @@ class CollaborativeShoppingList {
     constructor() {
         this.tg = window.Telegram?.WebApp;
         this.isTelegram = !!this.tg;
-        
-        // Данные
         this.items = [];
-        this.listId = null; // ID совместного списка
+        this.listId = null;
         this.userId = null;
         this.userName = null;
         this.lastSync = 0;
@@ -23,23 +21,12 @@ class CollaborativeShoppingList {
         this.tg.ready();
         this.tg.expand();
         
-        // Получаем данные пользователя
         this.initUserData();
-        
-        // Проверяем start_param (приглашение в список)
         this.checkInvitation();
-        
-        // Инициализация
         this.initTheme();
         this.setupEventListeners();
-        
-        // Загружаем или создаём список
         await this.loadOrCreateList();
-        
-        // Запускаем синхронизацию
         this.startSync();
-        
-        // Обновляем UI
         this.render();
         this.updateConnectionStatus();
     }
@@ -55,17 +42,14 @@ class CollaborativeShoppingList {
         }
     }
 
-    // Проверяем, пригласили ли нас в список
     checkInvitation() {
         const initData = this.tg.initDataUnsafe;
         
-        // Проверяем start_param (когда открываем через t.me/bot?startapp=LIST_ID)
         if (initData?.start_param) {
             this.pendingListId = initData.start_param;
             this.showJoinModal();
         }
         
-        // Проверяем реферальный параметр в URL (для веб-версии)
         const urlParams = new URLSearchParams(window.location.search);
         const ref = urlParams.get('ref');
         if (ref && !this.listId) {
@@ -76,34 +60,40 @@ class CollaborativeShoppingList {
 
     showJoinModal() {
         const modal = document.getElementById('join-modal');
+        if (!modal) return;
+        
         modal.classList.remove('hidden');
         
-        document.getElementById('modal-confirm').onclick = () => {
-            this.joinList(this.pendingListId);
-            modal.classList.add('hidden');
-        };
+        const confirmBtn = document.getElementById('modal-confirm');
+        const cancelBtn = document.getElementById('modal-cancel');
         
-        document.getElementById('modal-cancel').onclick = () => {
-            modal.classList.add('hidden');
-            this.pendingListId = null;
-        };
+        if (confirmBtn) {
+            confirmBtn.onclick = () => {
+                this.joinList(this.pendingListId);
+                modal.classList.add('hidden');
+            };
+        }
+        
+        if (cancelBtn) {
+            cancelBtn.onclick = () => {
+                modal.classList.add('hidden');
+                this.pendingListId = null;
+            };
+        }
     }
 
     async loadOrCreateList() {
-        // Пробуем загрузить существующий список из CloudStorage
         try {
             const saved = await this.cloudStorageGet('current_list');
             if (saved) {
                 const data = JSON.parse(saved);
                 this.listId = data.listId;
                 this.items = data.items || [];
-                console.log('✅ Загружен список:', this.listId);
             }
         } catch (e) {
             console.log('Нет сохранённого списка');
         }
 
-        // Если нет списка — создаём новый
         if (!this.listId) {
             this.createNewList();
         }
@@ -113,31 +103,22 @@ class CollaborativeShoppingList {
         this.listId = 'list_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
         this.items = [];
         this.saveList();
-        console.log('🆕 Создан новый список:', this.listId);
     }
 
     async joinList(listId) {
         this.listId = listId;
         this.pendingListId = null;
         
-        // Загружаем данные списка из облака
         await this.syncFromCloud();
-        
-        // Сохраняем у себя
         this.saveList();
-        
-        // Показываем уведомление
         this.showNotification('👥 Вы присоединились к списку!');
-        
         this.render();
         this.updateShareInfo();
     }
 
-    // CloudStorage операции
     cloudStorageGet(key) {
         return new Promise((resolve) => {
             if (!this.tg?.CloudStorage) {
-                // Fallback на localStorage
                 resolve(localStorage.getItem(key));
                 return;
             }
@@ -160,7 +141,6 @@ class CollaborativeShoppingList {
         });
     }
 
-    // Синхронизация с облаком
     async syncToCloud() {
         if (!this.listId) return;
         
@@ -174,25 +154,21 @@ class CollaborativeShoppingList {
         try {
             await this.cloudStorageSet(`shared_list_${this.listId}`, JSON.stringify(data));
             this.lastSync = Date.now();
-            console.log('☁️ Синхронизировано в облако');
         } catch (e) {
             console.error('Ошибка синхронизации:', e);
         }
     }
 
     async syncFromCloud() {
-        if (!this.listId) return;
+        if (!this.listId) return false;
         
         try {
             const data = await this.cloudStorageGet(`shared_list_${this.listId}`);
             if (data) {
                 const parsed = JSON.parse(data);
-                
-                // Объединяем изменения (простая стратегия: более новые данные побеждают)
                 if (parsed.updatedAt > this.lastSync) {
                     this.items = parsed.items || [];
                     this.lastSync = parsed.updatedAt;
-                    console.log('📥 Загружено из облака, обновлено:', new Date(parsed.updatedAt));
                     return true;
                 }
             }
@@ -203,7 +179,6 @@ class CollaborativeShoppingList {
     }
 
     startSync() {
-        // Синхронизация каждые 3 секунды
         this.syncInterval = setInterval(async () => {
             const updated = await this.syncFromCloud();
             if (updated) {
@@ -212,7 +187,6 @@ class CollaborativeShoppingList {
             }
         }, 3000);
 
-        // Синхронизация при возвращении в приложение
         document.addEventListener('visibilitychange', () => {
             if (!document.hidden) {
                 this.syncFromCloud().then(updated => {
@@ -222,7 +196,6 @@ class CollaborativeShoppingList {
         });
     }
 
-    // Действия с товарами
     async addItem() {
         const input = document.getElementById('item-input');
         const text = input.value.trim();
@@ -302,58 +275,22 @@ class CollaborativeShoppingList {
         this.cloudStorageSet('current_list', JSON.stringify(data));
     }
 
-    // Поделиться списком
     shareList() {
-        if (!this.listId) return;
+        if (!this.listId) {
+            this.showNotification('❌ Сначала добавьте товар');
+            return;
+        }
 
-        const shareText = `🛒 Присоединяйся к списку покупок!\n\nЯ создал список в Telegram Mini App. Нажми ссылку, чтобы открыть и редактировать вместе:`;
-
-        // Формируем ссылку для приглашения (через startapp)
         const botUsername = 'perdakluv_bot';
         const inviteLink = `https://t.me/${botUsername}?startapp=${this.listId}`;
 
-        const fullMessage = `${shareText}\n\n${inviteLink}`;
-
-        // Пробуем разные методы шеринга
-        if (this.tg?.shareGame)
-        {
-            this.tg.shareGame(fullMessage);
-        }
-        else if (this.tg?.switchInlineQuery)
-        {
-            this.tg.switchInlineQuery(this.listId, ['users', 'groups', 'channels']);
-        }
-        else if (this.tg?.openTelegramLink)
-        {
-            const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=${encodeURIComponent(shareText)}`;
-            this.tg.openTelegramLink(shareUrl);
-        }
-        else if (this.tg?.showPopup)
-        {
-            this.showSharePopup(fullMessage, inviteLink);
-        }
-        else
-        {
-            this.copyToClipboard(fullMessage);
-        }
-    }
-
-    // Вспомогательный метод для показа popup
-    showSharePopup(fullMessage, inviteLink) {
+        // Показываем popup с ссылкой
         this.tg.showPopup({
             title: '📤 Поделиться списком',
-            message: 'Отправьте эту ссылку другу:\n\n' + inviteLink,
+            message: `Отправьте эту ссылку другу:\n\n${inviteLink}`,
             buttons: [
-                {
-                    id: 'copy',
-                    type: 'default',
-                    text: '📋 Копировать ссылку'
-                },
-                {
-                    id: 'close',
-                    type: 'cancel',
-                    text: 'Закрыть'
-                }
+                { id: 'copy', type: 'default', text: '📋 Копировать' },
+                { id: 'close', type: 'cancel', text: 'Закрыть' }
             ]
         }, (buttonId) => {
             if (buttonId === 'copy') {
@@ -362,14 +299,12 @@ class CollaborativeShoppingList {
         });
     }
 
-    // Копирование в буфер обмена
     async copyToClipboard(text) {
         try {
             if (navigator.clipboard && navigator.clipboard.writeText) {
                 await navigator.clipboard.writeText(text);
-                this.showNotification('📋 Ссылка скопирована! Отправьте другу в Telegram');
+                this.showNotification('📋 Ссылка скопирована!');
             } else {
-                // Fallback для старых браузеров
                 const textarea = document.createElement('textarea');
                 textarea.value = text;
                 textarea.style.position = 'fixed';
@@ -381,31 +316,30 @@ class CollaborativeShoppingList {
                 this.showNotification('📋 Ссылка скопирована!');
             }
         } catch (err) {
-            console.error('Ошибка копирования:', err);
-            this.showNotification('❌ Не удалось скопировать');
+            this.showNotification('❌ Ошибка копирования');
         }
     }
 
-    // UI обновления
     updateShareInfo() {
         const shareInfo = document.getElementById('share-info');
-        if (this.listId) {
+        if (shareInfo && this.listId) {
             shareInfo.style.display = 'flex';
         }
     }
 
     updateConnectionStatus() {
         const status = document.getElementById('sync-status');
-        if (this.listId) {
+        if (status && this.listId) {
             status.textContent = '👥';
             status.title = 'Совместный список активен';
         }
     }
 
-    // Рендеринг
     render() {
         const listContainer = document.getElementById('shopping-list');
         const emptyState = document.getElementById('empty-state');
+        
+        if (!listContainer || !emptyState) return;
         
         if (this.items.length === 0) {
             listContainer.classList.add('hidden');
@@ -417,7 +351,6 @@ class CollaborativeShoppingList {
         listContainer.classList.remove('hidden');
         emptyState.classList.add('hidden');
         
-        // Сортируем
         const sortedItems = [...this.items].sort((a, b) => {
             if (a.purchased !== b.purchased) return a.purchased ? 1 : -1;
             return b.addedAt - a.addedAt;
@@ -451,16 +384,19 @@ class CollaborativeShoppingList {
     }
 
     updateProgress() {
+        const progressText = document.getElementById('progress-text');
+        const progressBar = document.getElementById('progress-bar');
+        
+        if (!progressText || !progressBar) return;
+        
         const total = this.items.length;
         const purchased = this.items.filter(i => i.purchased).length;
         const percent = total > 0 ? (purchased / total) * 100 : 0;
         
-        document.getElementById('progress-text').textContent = 
-            `${purchased} из ${total} куплено`;
-        document.getElementById('progress-bar').style.width = `${percent}%`;
+        progressText.textContent = `${purchased} из ${total} куплено`;
+        progressBar.style.width = `${percent}%`;
     }
 
-    // Вспомогательные методы
     escapeHtml(text) {
         const div = document.createElement('div');
         div.textContent = text;
@@ -508,21 +444,53 @@ class CollaborativeShoppingList {
     }
 
     setupEventListeners() {
-        document.getElementById('add-btn').addEventListener('click', () => this.addItem());
-        document.getElementById('item-input').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') this.addItem();
-        });
-        document.getElementById('theme-toggle').addEventListener('click', () => {
-            const current = document.body.getAttribute('data-theme');
-            document.body.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
-            this.haptic('selection');
-        });
-        document.getElementById('clear-btn').addEventListener('click', () => this.clearAll());
-        document.getElementById('share-btn').addEventListener('click', () => this.shareList());
+        // Кнопка добавления
+        const addBtn = document.getElementById('add-btn');
+        if (addBtn) {
+            addBtn.addEventListener('click', () => this.addItem());
+        }
+
+        // Поле ввода
+        const input = document.getElementById('item-input');
+        if (input) {
+            input.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') this.addItem();
+            });
+        }
+
+        // Кнопка темы
+        const themeBtn = document.getElementById('theme-toggle');
+        if (themeBtn) {
+            themeBtn.addEventListener('click', () => {
+                const current = document.body.getAttribute('data-theme');
+                document.body.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
+                this.haptic('selection');
+            });
+        }
+
+        // Кнопка очистки
+        const clearBtn = document.getElementById('clear-btn');
+        if (clearBtn) {
+            clearBtn.addEventListener('click', () => this.clearAll());
+        }
+
+        // Кнопка поделиться - привязываем напрямую
+        const shareBtn = document.getElementById('share-btn');
+        if (shareBtn) {
+            // Удаляем старые обработчики если есть
+            const newShareBtn = shareBtn.cloneNode(true);
+            shareBtn.parentNode.replaceChild(newShareBtn, shareBtn);
+            
+            // Добавляем новый обработчик
+            newShareBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this.shareList();
+            });
+        }
     }
 
     initDemoMode() {
-        console.log('Demo mode');
         this.listId = 'demo_' + Date.now();
         this.items = [];
         this.render();
