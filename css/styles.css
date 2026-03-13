@@ -311,10 +311,10 @@ body {
 .cancel-btn {
     width: 48px;
     height: 48px;
-    border: 2px solid var(--danger-color);
+    border: none;
     border-radius: var(--border-radius);
-    background: transparent;
-    color: var(--danger-color);
+    background: var(--danger-color);
+    color: white;
     font-size: 20px;
     font-weight: 600;
     cursor: pointer;
@@ -326,9 +326,8 @@ body {
 }
 
 .cancel-btn:active {
-    background: var(--danger-color);
-    color: white;
     transform: scale(0.95);
+    opacity: 0.8;
 }
 
 .cancel-btn.visible {
