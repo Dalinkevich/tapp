@@ -6,8 +6,8 @@ class CollaborativeShoppingList {
         this.listId = null;
         this.userId = null;
         this.userName = null;
-        this.lastSync = 0;
-        this.syncInterval = null;
+        
+        this.firebaseUrl = 'https://database-7a0a8-default-rtdb.europe-west1.firebasedatabase.app/';
         
         this.init();
     }
@@ -25,8 +25,13 @@ class CollaborativeShoppingList {
         this.checkInvitation();
         this.initTheme();
         this.setupEventListeners();
+        
+        // Загружаем или создаём список
         await this.loadOrCreateList();
-        this.startSync();
+        
+        // Запускаем реальное время Firebase
+        this.startRealtimeSync();
+        
         this.render();
         this.updateConnectionStatus();
     }
@@ -49,13 +54,6 @@ class CollaborativeShoppingList {
             this.pendingListId = initData.start_param;
             this.showJoinModal();
         }
-        
-        const urlParams = new URLSearchParams(window.location.search);
-        const ref = urlParams.get('ref');
-        if (ref && !this.listId) {
-            this.pendingListId = ref;
-            this.showJoinModal();
-        }
     }
 
     showJoinModal() {
@@ -64,31 +62,24 @@ class CollaborativeShoppingList {
         
         modal.classList.remove('hidden');
         
-        const confirmBtn = document.getElementById('modal-confirm');
-        const cancelBtn = document.getElementById('modal-cancel');
+        document.getElementById('modal-confirm').onclick = () => {
+            this.joinList(this.pendingListId);
+            modal.classList.add('hidden');
+        };
         
-        if (confirmBtn) {
-            confirmBtn.onclick = () => {
-                this.joinList(this.pendingListId);
-                modal.classList.add('hidden');
-            };
-        }
-        
-        if (cancelBtn) {
-            cancelBtn.onclick = () => {
-                modal.classList.add('hidden');
-                this.pendingListId = null;
-            };
-        }
+        document.getElementById('modal-cancel').onclick = () => {
+            modal.classList.add('hidden');
+            this.pendingListId = null;
+        };
     }
 
     async loadOrCreateList() {
+        // Пробуем загрузить сохранённый listId
         try {
             const saved = await this.cloudStorageGet('current_list');
             if (saved) {
                 const data = JSON.parse(saved);
                 this.listId = data.listId;
-                this.items = data.items || [];
             }
         } catch (e) {
             console.log('Нет сохранённого списка');
@@ -102,20 +93,93 @@ class CollaborativeShoppingList {
     createNewList() {
         this.listId = 'list_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
         this.items = [];
-        this.saveList();
+        this.saveListId();
+        console.log('🆕 Создан новый список:', this.listId);
     }
 
     async joinList(listId) {
         this.listId = listId;
         this.pendingListId = null;
+        this.saveListId();
         
-        await this.syncFromCloud();
-        this.saveList();
+        // Загружаем текущие данные из Firebase
+        await this.loadFromFirebase();
+        
         this.showNotification('👥 Вы присоединились к списку!');
         this.render();
         this.updateShareInfo();
     }
 
+    // Загрузка из Firebase
+    async loadFromFirebase() {
+        if (!this.listId) return;
+        
+        try {
+            const response = await fetch(`${this.firebaseUrl}/lists/${this.listId}.json`);
+            const data = await response.json();
+            
+            if (data && data.items) {
+                this.items = data.items;
+                console.log('📥 Загружено из Firebase:', this.items.length, 'товаров');
+            } else {
+                this.items = [];
+            }
+        } catch (e) {
+            console.error('Ошибка загрузки из Firebase:', e);
+        }
+    }
+
+    // Сохранение в Firebase
+    async saveToFirebase() {
+        if (!this.listId) return;
+        
+        const data = {
+            items: this.items,
+            updatedAt: Date.now(),
+            updatedBy: this.userId,
+            updatedByName: this.userName
+        };
+        
+        try {
+            await fetch(`${this.firebaseUrl}/lists/${this.listId}.json`, {
+                method: 'PUT',
+                body: JSON.stringify(data)
+            });
+            console.log('☁️ Сохранено в Firebase');
+        } catch (e) {
+            console.error('Ошибка сохранения:', e);
+        }
+    }
+
+    // Реальное время через polling
+    startRealtimeSync() {
+        // Проверяем обновления каждые 2 секунды
+        setInterval(async () => {
+            if (!this.listId) return;
+            
+            try {
+                const response = await fetch(`${this.firebaseUrl}/lists/${this.listId}.json`);
+                const data = await response.json();
+                
+                if (data && data.items && data.updatedAt > this.lastUpdate) {
+                    // Проверяем, изменились ли данные
+                    const newItemsJson = JSON.stringify(data.items);
+                    const currentItemsJson = JSON.stringify(this.items);
+                    
+                    if (newItemsJson !== currentItemsJson) {
+                        this.items = data.items;
+                        this.lastUpdate = data.updatedAt;
+                        this.render();
+                        this.showNotification('🔄 Список обновлён!', 1000);
+                    }
+                }
+            } catch (e) {
+                // Игнорируем ошибки сети
+            }
+        }, 2000);
+    }
+
+    // Локальное сохранение только listId
     cloudStorageGet(key) {
         return new Promise((resolve) => {
             if (!this.tg?.CloudStorage) {
@@ -128,72 +192,13 @@ class CollaborativeShoppingList {
         });
     }
 
-    cloudStorageSet(key, value) {
-        return new Promise((resolve) => {
-            if (!this.tg?.CloudStorage) {
-                localStorage.setItem(key, value);
-                resolve();
-                return;
-            }
-            this.tg.CloudStorage.setItem(key, value, (err) => {
-                resolve(!err);
-            });
-        });
-    }
-
-    async syncToCloud() {
-        if (!this.listId) return;
-        
-        const data = {
-            items: this.items,
-            updatedAt: Date.now(),
-            updatedBy: this.userId,
-            updatedByName: this.userName
-        };
-        
-        try {
-            await this.cloudStorageSet(`shared_list_${this.listId}`, JSON.stringify(data));
-            this.lastSync = Date.now();
-        } catch (e) {
-            console.error('Ошибка синхронизации:', e);
+    saveListId() {
+        const data = { listId: this.listId };
+        if (this.tg?.CloudStorage) {
+            this.tg.CloudStorage.setItem('current_list', JSON.stringify(data));
+        } else {
+            localStorage.setItem('current_list', JSON.stringify(data));
         }
-    }
-
-    async syncFromCloud() {
-        if (!this.listId) return false;
-        
-        try {
-            const data = await this.cloudStorageGet(`shared_list_${this.listId}`);
-            if (data) {
-                const parsed = JSON.parse(data);
-                if (parsed.updatedAt > this.lastSync) {
-                    this.items = parsed.items || [];
-                    this.lastSync = parsed.updatedAt;
-                    return true;
-                }
-            }
-        } catch (e) {
-            console.error('Ошибка загрузки:', e);
-        }
-        return false;
-    }
-
-    startSync() {
-        this.syncInterval = setInterval(async () => {
-            const updated = await this.syncFromCloud();
-            if (updated) {
-                this.render();
-                this.showNotification('🔄 Список обновлён!', 1000);
-            }
-        }, 3000);
-
-        document.addEventListener('visibilitychange', () => {
-            if (!document.hidden) {
-                this.syncFromCloud().then(updated => {
-                    if (updated) this.render();
-                });
-            }
-        });
     }
 
     async addItem() {
@@ -212,7 +217,7 @@ class CollaborativeShoppingList {
         };
         
         this.items.unshift(item);
-        await this.saveAndSync();
+        await this.saveToFirebase(); // Сохраняем в Firebase
         input.value = '';
         
         this.haptic('light');
@@ -225,9 +230,8 @@ class CollaborativeShoppingList {
             item.purchased = !item.purchased;
             item.purchasedBy = item.purchased ? this.userId : null;
             item.purchasedByName = item.purchased ? this.userName : null;
-            item.purchasedAt = item.purchased ? Date.now() : null;
             
-            await this.saveAndSync();
+            await this.saveToFirebase(); // Сохраняем в Firebase
             this.haptic(item.purchased ? 'medium' : 'light');
             this.render();
         }
@@ -236,7 +240,7 @@ class CollaborativeShoppingList {
     async deleteItem(id, event) {
         event.stopPropagation();
         this.items = this.items.filter(i => i.id !== id);
-        await this.saveAndSync();
+        await this.saveToFirebase(); // Сохраняем в Firebase
         this.haptic('rigid');
         this.render();
     }
@@ -254,25 +258,11 @@ class CollaborativeShoppingList {
         }, async (buttonId) => {
             if (buttonId === 'clear') {
                 this.items = [];
-                await this.saveAndSync();
+                await this.saveToFirebase(); // Сохраняем в Firebase
                 this.haptic('success');
                 this.render();
             }
         });
-    }
-
-    async saveAndSync() {
-        this.saveList();
-        await this.syncToCloud();
-    }
-
-    saveList() {
-        const data = {
-            listId: this.listId,
-            items: this.items,
-            savedAt: Date.now()
-        };
-        this.cloudStorageSet('current_list', JSON.stringify(data));
     }
 
     shareList() {
@@ -284,7 +274,6 @@ class CollaborativeShoppingList {
         const botUsername = 'perdakluv_bot';
         const inviteLink = `https://t.me/${botUsername}?startapp=${this.listId}`;
 
-        // Показываем popup с ссылкой
         this.tg.showPopup({
             title: '📤 Поделиться списком',
             message: `Отправьте эту ссылку другу:\n\n${inviteLink}`,
@@ -444,13 +433,11 @@ class CollaborativeShoppingList {
     }
 
     setupEventListeners() {
-        // Кнопка добавления
         const addBtn = document.getElementById('add-btn');
         if (addBtn) {
             addBtn.addEventListener('click', () => this.addItem());
         }
 
-        // Поле ввода
         const input = document.getElementById('item-input');
         if (input) {
             input.addEventListener('keypress', (e) => {
@@ -458,7 +445,6 @@ class CollaborativeShoppingList {
             });
         }
 
-        // Кнопка темы
         const themeBtn = document.getElementById('theme-toggle');
         if (themeBtn) {
             themeBtn.addEventListener('click', () => {
@@ -468,20 +454,16 @@ class CollaborativeShoppingList {
             });
         }
 
-        // Кнопка очистки
         const clearBtn = document.getElementById('clear-btn');
         if (clearBtn) {
             clearBtn.addEventListener('click', () => this.clearAll());
         }
 
-        // Кнопка поделиться - привязываем напрямую
         const shareBtn = document.getElementById('share-btn');
         if (shareBtn) {
-            // Удаляем старые обработчики если есть
             const newShareBtn = shareBtn.cloneNode(true);
             shareBtn.parentNode.replaceChild(newShareBtn, shareBtn);
             
-            // Добавляем новый обработчик
             newShareBtn.addEventListener('click', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
