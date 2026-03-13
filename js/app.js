@@ -305,24 +305,85 @@ class CollaborativeShoppingList {
     // Поделиться списком
     shareList() {
         if (!this.listId) return;
-        
-        // Создаём ссылку для приглашения
-        const shareText = `🛒 Присоединяйся к списку покупок!\n\n` +
-                         `Я создал список в Telegram Mini App.\n` +
-                         `Нажми кнопку, чтобы открыть и редактировать вместе со мной.`;
-        
-        // Используем switchInlineQuery для шеринга через бота
-        if (this.tg.switchInlineQuery) {
-            this.tg.switchInlineQuery(this.listId, ['users', 'groups']);
-        } else {
-            // Fallback: копируем ссылку
-            const url = `https://t.me/ВАШ_БОТ?startapp=${this.listId}`;
-            navigator.clipboard.writeText(`${shareText}\n\n${url}`).then(() => {
-                this.showNotification('📋 Ссылка скопирована! Отправьте другу.');
-            });
+
+        const shareText = `🛒 Присоединяйся к списку покупок!\n\nЯ создал список в Telegram Mini App. Нажми ссылку, чтобы открыть и редактировать вместе:`;
+
+        // Формируем ссылку для приглашения (через startapp)
+        const botUsername = 'perdakluv_bot';
+        const inviteLink = `https://t.me/${botUsername}?startapp=${this.listId}`;
+
+        const fullMessage = `${shareText}\n\n${inviteLink}`;
+
+        // Пробуем разные методы шеринга
+        if (this.tg?.shareGame)
+        {
+            this.tg.shareGame(fullMessage);
         }
-        
-        this.updateShareInfo();
+        else if (this.tg?.switchInlineQuery)
+        {
+            this.tg.switchInlineQuery(this.listId, ['users', 'groups', 'channels']);
+        }
+        else if (this.tg?.openTelegramLink)
+        {
+            const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=${encodeURIComponent(shareText)}`;
+            this.tg.openTelegramLink(shareUrl);
+        }
+        else if (this.tg?.showPopup)
+        {
+            this.showSharePopup(fullMessage, inviteLink);
+        }
+        else
+        {
+            this.copyToClipboard(fullMessage);
+        }
+    }
+
+    // Вспомогательный метод для показа popup
+    showSharePopup(fullMessage, inviteLink) {
+        this.tg.showPopup({
+            title: '📤 Поделиться списком',
+            message: 'Отправьте эту ссылку другу:\n\n' + inviteLink,
+            buttons: [
+                {
+                    id: 'copy',
+                    type: 'default',
+                    text: '📋 Копировать ссылку'
+                },
+                {
+                    id: 'close',
+                    type: 'cancel',
+                    text: 'Закрыть'
+                }
+            ]
+        }, (buttonId) => {
+            if (buttonId === 'copy') {
+                this.copyToClipboard(inviteLink);
+            }
+        });
+    }
+
+    // Копирование в буфер обмена
+    async copyToClipboard(text) {
+        try {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                await navigator.clipboard.writeText(text);
+                this.showNotification('📋 Ссылка скопирована! Отправьте другу в Telegram');
+            } else {
+                // Fallback для старых браузеров
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                textarea.style.position = 'fixed';
+                textarea.style.opacity = '0';
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                this.showNotification('📋 Ссылка скопирована!');
+            }
+        } catch (err) {
+            console.error('Ошибка копирования:', err);
+            this.showNotification('❌ Не удалось скопировать');
+        }
     }
 
     // UI обновления
