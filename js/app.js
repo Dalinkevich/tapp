@@ -5,8 +5,9 @@ class CollaborativeShoppingList {
         this.items = [];
         this.listId = null;
         this.userId = null;
-        this.userName = null;
-        
+        this.userName = null;       
+        this.lastUpdate = 0;
+        this.lastSavedAt = 0;        
         this.firebaseUrl = 'https://database-7a0a8-default-rtdb.europe-west1.firebasedatabase.app/';
         
         this.init();
@@ -87,12 +88,16 @@ class CollaborativeShoppingList {
 
         if (!this.listId) {
             this.createNewList();
+        } else {
+            // Загружаем данные из Firebase при старте
+            await this.loadFromFirebase();
         }
     }
 
     createNewList() {
         this.listId = 'list_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
         this.items = [];
+        this.lastUpdate = Date.now();
         this.saveListId();
         console.log('🆕 Создан новый список:', this.listId);
     }
@@ -120,9 +125,12 @@ class CollaborativeShoppingList {
             
             if (data && data.items) {
                 this.items = data.items;
+                this.lastUpdate = data.updatedAt || Date.now();
+                this.lastSavedAt = data.updatedAt || 0;
                 console.log('📥 Загружено из Firebase:', this.items.length, 'товаров');
             } else {
                 this.items = [];
+                this.lastUpdate = Date.now();
             }
         } catch (e) {
             console.error('Ошибка загрузки из Firebase:', e);
@@ -133,9 +141,12 @@ class CollaborativeShoppingList {
     async saveToFirebase() {
         if (!this.listId) return;
         
+        const now = Date.now();
+        this.lastSavedAt = now; // Запоминаем, когда мы сохранили
+        
         const data = {
             items: this.items,
-            updatedAt: Date.now(),
+            updatedAt: now,
             updatedBy: this.userId,
             updatedByName: this.userName
         };
@@ -145,6 +156,7 @@ class CollaborativeShoppingList {
                 method: 'PUT',
                 body: JSON.stringify(data)
             });
+            this.lastUpdate = now; // Обновляем lastUpdate после успешного сохранения
             console.log('☁️ Сохранено в Firebase');
         } catch (e) {
             console.error('Ошибка сохранения:', e);
@@ -161,17 +173,26 @@ class CollaborativeShoppingList {
                 const response = await fetch(`${this.firebaseUrl}/lists/${this.listId}.json`);
                 const data = await response.json();
                 
-                if (data && data.items && data.updatedAt > this.lastUpdate) {
-                    // Проверяем, изменились ли данные
-                    const newItemsJson = JSON.stringify(data.items);
-                    const currentItemsJson = JSON.stringify(this.items);
-                    
-                    if (newItemsJson !== currentItemsJson) {
-                        this.items = data.items;
-                        this.lastUpdate = data.updatedAt;
-                        this.render();
-                        this.showNotification('🔄 Список обновлён!', 1000);
-                    }
+                if (!data || !data.items) return;
+                
+                // Важно: проверяем, что данные новее нашего последнего сохранения
+                // И что они изменились по сравнению с текущими
+                const serverTime = data.updatedAt || 0;
+                
+                // Если серверные данные старше или равны нашим последним сохранённым — пропускаем
+                if (serverTime <= this.lastSavedAt) {
+                    return;
+                }
+                
+                // Проверяем, изменились ли данные реально
+                const newItemsJson = JSON.stringify(data.items);
+                const currentItemsJson = JSON.stringify(this.items);
+                
+                if (newItemsJson !== currentItemsJson) {
+                    this.items = data.items;
+                    this.lastUpdate = serverTime;
+                    this.render();
+                    this.showNotification('🔄 Список обновлён!', 1000);
                 }
             } catch (e) {
                 // Игнорируем ошибки сети
@@ -475,6 +496,8 @@ class CollaborativeShoppingList {
     initDemoMode() {
         this.listId = 'demo_' + Date.now();
         this.items = [];
+        this.lastUpdate = Date.now();
+        this.lastSavedAt = 0;
         this.render();
     }
 }
