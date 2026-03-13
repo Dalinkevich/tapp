@@ -94,7 +94,7 @@ class CollaborativeShoppingList {
         this.items = [];
         this.lastUpdate = Date.now();
         this.saveListId();
-        console.log('🆕 Создан новый список:', this.listId);
+        console.log('Создан новый список:', this.listId);
     }
 
     async joinList(listId) {
@@ -120,7 +120,7 @@ class CollaborativeShoppingList {
                 this.items = data.items;
                 this.lastUpdate = data.updatedAt || Date.now();
                 this.lastSavedAt = data.updatedAt || 0;
-                console.log('📥 Загружено из Firebase:', this.items.length, 'товаров');
+                console.log('Загружено из Firebase:', this.items.length, 'товаров');
             } else {
                 this.items = [];
                 this.lastUpdate = Date.now();
@@ -149,7 +149,7 @@ class CollaborativeShoppingList {
                 body: JSON.stringify(data)
             });
             this.lastUpdate = now;
-            console.log('☁️ Сохранено в Firebase');
+            console.log('Сохранено в Firebase');
         } catch (e) {
             console.error('Ошибка сохранения:', e);
         }
@@ -178,7 +178,7 @@ class CollaborativeShoppingList {
                     this.items = data.items;
                     this.lastUpdate = serverTime;
                     this.render();
-                    this.showNotification('🔄 Список обновлён!', 1000);
+                    this.showNotification('🔄Список обновлён!', 1000);
                 }
             } catch (e) {}
         }, 2000);
@@ -235,6 +235,13 @@ class CollaborativeShoppingList {
         input.blur();
         this.updateCancelButton();
         this.haptic('light');
+    }
+
+    hideKeyboard() {
+        const input = document.getElementById('item-input');
+        if (input) {
+            input.blur();
+        }
     }
 
     updateCancelButton() {
@@ -471,6 +478,31 @@ class CollaborativeShoppingList {
             });
             
             input.addEventListener('input', () => this.updateCancelButton());
+        }
+
+        const mainContent = document.getElementById('main-content');
+        if (mainContent) {
+            mainContent.addEventListener('click', (e) => {
+                if (e.target !== input && !e.target.closest('.add-form')) {
+                    this.hideKeyboard();
+                }
+            });
+        }
+
+        const header = document.querySelector('.header');
+        if (header) {
+            header.addEventListener('click', (e) => {
+                if (!e.target.closest('.theme-toggle') && !e.target.closest('.sync-status')) {
+                    this.hideKeyboard();
+                }
+            });
+        }
+
+        const bottomActions = document.querySelector('.bottom-actions');
+        if (bottomActions) {
+            bottomActions.addEventListener('click', () => {
+                this.hideKeyboard();
+            });
         }
 
         const themeBtn = document.getElementById('theme-toggle');
