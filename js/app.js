@@ -9,7 +9,8 @@ class CollaborativeShoppingList {
         this.lastUpdate = 0;
         this.lastSavedAt = 0;        
         this.firebaseUrl = 'https://database-7a0a8-default-rtdb.europe-west1.firebasedatabase.app/';
-        this.connectedUsers = new Map(); // Храним подключённых пользователей
+        this.connectedUsers = new Map();
+        this.myPresenceInterval = null;
         
         this.init();
     }
@@ -30,6 +31,7 @@ class CollaborativeShoppingList {
         
         await this.loadOrCreateList();
         this.startRealtimeSync();
+        this.startPresenceUpdates();
         
         this.render();
         this.updateConnectionStatus();
@@ -103,10 +105,8 @@ class CollaborativeShoppingList {
         this.pendingListId = null;
         this.saveListId();
         
-        // Регистрируем себя в списке пользователей
-        await this.registerUser();
-        
         await this.loadFromFirebase();
+        await this.registerUser();
         
         this.showNotification('👥 Вы присоединились к списку!');
         this.render();
@@ -123,13 +123,29 @@ class CollaborativeShoppingList {
         };
         
         try {
+            // Используем PATCH вместо PUT, чтобы не перезаписать других пользователей
             await fetch(`${this.firebaseUrl}/lists/${this.listId}/users/${this.userId}.json`, {
                 method: 'PUT',
                 body: JSON.stringify(userData)
             });
+            console.log('Пользователь зарегистрирован:', this.userName);
         } catch (e) {
             console.error('Ошибка регистрации пользователя:', e);
         }
+    }
+
+    startPresenceUpdates() {
+        // Обновляем lastActive каждые 10 секунд
+        this.myPresenceInterval = setInterval(async () => {
+            if (!this.listId || !this.userId) return;
+            
+            try {
+                await fetch(`${this.firebaseUrl}/lists/${this.listId}/users/${this.userId}/lastActive.json`, {
+                    method: 'PUT',
+                    body: JSON.stringify(Date.now())
+                });
+            } catch (e) {}
+        }, 10000);
     }
 
     async loadFromFirebase() {
@@ -143,15 +159,17 @@ class CollaborativeShoppingList {
                 this.items = data.items;
                 this.lastUpdate = data.updatedAt || Date.now();
                 this.lastSavedAt = data.updatedAt || 0;
-                console.log('Загружено из Firebase:', this.items.length, 'товаров');
             } else {
                 this.items = [];
                 this.lastUpdate = Date.now();
             }
             
-            // Загружаем список пользователей
+            // Загружаем пользователей
             if (data && data.users) {
                 this.connectedUsers = new Map(Object.entries(data.users));
+                this.updateUsersList();
+            } else {
+                this.connectedUsers.clear();
                 this.updateUsersList();
             }
         } catch (e) {
@@ -165,7 +183,8 @@ class CollaborativeShoppingList {
         const now = Date.now();
         this.lastSavedAt = now;
         
-        const data = {
+        // Сохраняем только items, не трогаем users
+        const updates = {
             items: this.items,
             updatedAt: now,
             updatedBy: this.userId,
@@ -174,8 +193,8 @@ class CollaborativeShoppingList {
         
         try {
             await fetch(`${this.firebaseUrl}/lists/${this.listId}.json`, {
-                method: 'PUT',
-                body: JSON.stringify(data)
+                method: 'PATCH',
+                body: JSON.stringify(updates)
             });
             this.lastUpdate = now;
             console.log('Сохранено в Firebase');
@@ -197,12 +216,22 @@ class CollaborativeShoppingList {
                 // Обновляем пользователей
                 if (data.users) {
                     const newUsers = new Map(Object.entries(data.users));
-                    if (this.hasUsersChanged(newUsers)) {
-                        this.connectedUsers = newUsers;
+                    // Фильтруем неактивных (не обновлялись более 2 минут)
+                    const now = Date.now();
+                    const activeUsers = new Map();
+                    for (let [id, user] of newUsers) {
+                        if (user.lastActive && (now - user.lastActive) < 120000) {
+                            activeUsers.set(id, user);
+                        }
+                    }
+                    
+                    if (this.hasUsersChanged(activeUsers)) {
+                        this.connectedUsers = activeUsers;
                         this.updateUsersList();
                     }
                 }
                 
+                // Проверяем обновления товаров
                 if (!data.items) return;
                 
                 const serverTime = data.updatedAt || 0;
@@ -228,7 +257,8 @@ class CollaborativeShoppingList {
         if (this.connectedUsers.size !== newUsers.size) return true;
         for (let [id, user] of newUsers) {
             if (!this.connectedUsers.has(id)) return true;
-            if (this.connectedUsers.get(id).name !== user.name) return true;
+            const oldUser = this.connectedUsers.get(id);
+            if (oldUser.name !== user.name || oldUser.lastActive !== user.lastActive) return true;
         }
         return false;
     }
@@ -247,8 +277,10 @@ class CollaborativeShoppingList {
         if (otherUsers.length > 0) {
             usersListEl.textContent = otherUsers.join(', ');
             usersListEl.style.display = 'inline';
+            console.log('Подключены:', otherUsers);
         } else {
-            usersListEl.style.display = 'none';
+            usersListEl.textContent = 'ожидание...';
+            usersListEl.style.display = 'inline';
         }
     }
 

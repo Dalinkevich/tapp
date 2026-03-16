@@ -517,24 +517,6 @@ body {
     transform: scale(0.98);
 }
 
-/* Join button in empty state */
-.join-btn {
-    margin-top: 20px;
-    padding: 14px 24px;
-    background: var(--tg-theme-button-color);
-    color: var(--tg-theme-button-text-color);
-    border: none;
-    border-radius: var(--border-radius);
-    font-size: 16px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: var(--transition);
-}
-
-.join-btn:active {
-    transform: scale(0.98);
-}
-
 /* Notification */
 .notification {
     position: fixed;
@@ -565,4 +547,41 @@ body {
         opacity: 1;
         transform: translateX(-50%) translateY(0);
     }
+}
+
+/* User avatars in header */
+.connected-users {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: 8px;
+}
+
+.user-avatar-small {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--tg-theme-button-color);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: bold;
+    border: 2px solid var(--tg-theme-bg-color);
+    margin-left: -8px;
+}
+
+.user-avatar-small:first-child {
+    margin-left: 0;
+}
+
+.users-count-badge {
+    background: var(--success-color);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    margin-left: 4px;
 }
