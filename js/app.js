@@ -11,12 +11,16 @@ class CollaborativeShoppingList {
         this.firebaseUrl = 'https://database-7a0a8-default-rtdb.europe-west1.firebasedatabase.app/';
         this.connectedUsers = new Map();
         this.myPresenceInterval = null;
+        this.isInitialized = false;
         
         this.init();
     }
 
     async init() {
+        console.log('Инициализация...');
+        
         if (!this.isTelegram) {
+            console.log('Демо-режим');
             this.initDemoMode();
             return;
         }
@@ -25,16 +29,28 @@ class CollaborativeShoppingList {
         this.tg.expand();
         
         this.initUserData();
+        console.log('Пользователь:', this.userName, this.userId);
+        
         this.checkInvitation();
         this.initTheme();
         this.setupEventListeners();
         
         await this.loadOrCreateList();
+        
+        // ВАЖНО: Показываем плашку сразу после загрузки списка
+        this.showShareInfo();
+        
+        // Регистрируем пользователя в списке
+        await this.registerUser();
+        
         this.startRealtimeSync();
         this.startPresenceUpdates();
         
         this.render();
         this.updateConnectionStatus();
+        
+        this.isInitialized = true;
+        console.log('Инициализация завершена');
     }
 
     initUserData() {
@@ -52,6 +68,7 @@ class CollaborativeShoppingList {
         const initData = this.tg.initDataUnsafe;
         
         if (initData?.start_param) {
+            console.log('Приглашение получено:', initData.start_param);
             this.pendingListId = initData.start_param;
             this.showJoinModal();
         }
@@ -80,6 +97,7 @@ class CollaborativeShoppingList {
             if (saved) {
                 const data = JSON.parse(saved);
                 this.listId = data.listId;
+                console.log('Загружен сохранённый список:', this.listId);
             }
         } catch (e) {
             console.log('Нет сохранённого списка');
@@ -101,6 +119,7 @@ class CollaborativeShoppingList {
     }
 
     async joinList(listId) {
+        console.log('Присоединение к списку:', listId);
         this.listId = listId;
         this.pendingListId = null;
         this.saveListId();
@@ -108,13 +127,17 @@ class CollaborativeShoppingList {
         await this.loadFromFirebase();
         await this.registerUser();
         
+        this.showShareInfo();
         this.showNotification('👥 Вы присоединились к списку!');
         this.render();
-        this.updateShareInfo();
+        this.updateConnectionStatus();
     }
 
     async registerUser() {
-        if (!this.listId || !this.userId) return;
+        if (!this.listId || !this.userId) {
+            console.error('Невозможно зарегистрировать: нет listId или userId');
+            return;
+        }
         
         const userData = {
             name: this.userName,
@@ -123,12 +146,19 @@ class CollaborativeShoppingList {
         };
         
         try {
-            // Используем PATCH вместо PUT, чтобы не перезаписать других пользователей
-            await fetch(`${this.firebaseUrl}/lists/${this.listId}/users/${this.userId}.json`, {
+            const url = `${this.firebaseUrl}/lists/${this.listId}/users/${this.userId}.json`;
+            console.log('Регистрация пользователя:', url, userData);
+            
+            const response = await fetch(url, {
                 method: 'PUT',
                 body: JSON.stringify(userData)
             });
-            console.log('Пользователь зарегистрирован:', this.userName);
+            
+            if (response.ok) {
+                console.log('Пользователь зарегистрирован:', this.userName);
+            } else {
+                console.error('Ошибка регистрации:', response.status);
+            }
         } catch (e) {
             console.error('Ошибка регистрации пользователя:', e);
         }
@@ -152,8 +182,13 @@ class CollaborativeShoppingList {
         if (!this.listId) return;
         
         try {
-            const response = await fetch(`${this.firebaseUrl}/lists/${this.listId}.json`);
+            const url = `${this.firebaseUrl}/lists/${this.listId}.json`;
+            console.log('Загрузка из Firebase:', url);
+            
+            const response = await fetch(url);
             const data = await response.json();
+            
+            console.log('Данные из Firebase:', data);
             
             if (data && data.items) {
                 this.items = data.items;
@@ -166,9 +201,11 @@ class CollaborativeShoppingList {
             
             // Загружаем пользователей
             if (data && data.users) {
+                console.log('Загружены пользователи:', Object.keys(data.users));
                 this.connectedUsers = new Map(Object.entries(data.users));
                 this.updateUsersList();
             } else {
+                console.log('Пользователей нет');
                 this.connectedUsers.clear();
                 this.updateUsersList();
             }
@@ -183,7 +220,6 @@ class CollaborativeShoppingList {
         const now = Date.now();
         this.lastSavedAt = now;
         
-        // Сохраняем только items, не трогаем users
         const updates = {
             items: this.items,
             updatedAt: now,
@@ -192,11 +228,11 @@ class CollaborativeShoppingList {
         };
         
         try {
-            await fetch(`${this.firebaseUrl}/lists/${this.listId}.json`, {
+            const url = `${this.firebaseUrl}/lists/${this.listId}.json`;
+            await fetch(url, {
                 method: 'PATCH',
                 body: JSON.stringify(updates)
             });
-            this.lastUpdate = now;
             console.log('Сохранено в Firebase');
         } catch (e) {
             console.error('Ошибка сохранения:', e);
@@ -215,17 +251,18 @@ class CollaborativeShoppingList {
                 
                 // Обновляем пользователей
                 if (data.users) {
-                    const newUsers = new Map(Object.entries(data.users));
-                    // Фильтруем неактивных (не обновлялись более 2 минут)
                     const now = Date.now();
                     const activeUsers = new Map();
-                    for (let [id, user] of newUsers) {
+                    
+                    for (let [id, user] of Object.entries(data.users)) {
+                        // Считаем активными пользователей, которые обновлялись < 2 минут назад
                         if (user.lastActive && (now - user.lastActive) < 120000) {
                             activeUsers.set(id, user);
                         }
                     }
                     
                     if (this.hasUsersChanged(activeUsers)) {
+                        console.log('Обновление пользователей:', Array.from(activeUsers.keys()));
                         this.connectedUsers = activeUsers;
                         this.updateUsersList();
                     }
@@ -247,7 +284,7 @@ class CollaborativeShoppingList {
                     this.items = data.items;
                     this.lastUpdate = serverTime;
                     this.render();
-                    this.showNotification('🔄 Список обновлён!', 1000);
+                    this.showNotification('Список обновлён!', 1000);
                 }
             } catch (e) {}
         }, 2000);
@@ -263,6 +300,17 @@ class CollaborativeShoppingList {
         return false;
     }
 
+    // ВАЖНО: Новый метод для показа плашки
+    showShareInfo() {
+        const shareInfo = document.getElementById('share-info');
+        if (shareInfo && this.listId) {
+            console.log('Показываем share-info');
+            shareInfo.style.display = 'flex';
+            shareInfo.classList.add('visible');
+            this.updateUsersList();
+        }
+    }
+
     updateUsersList() {
         const usersListEl = document.getElementById('users-list');
         if (!usersListEl) return;
@@ -274,13 +322,12 @@ class CollaborativeShoppingList {
             }
         }
         
+        console.log('Обновление списка пользователей:', otherUsers);
+        
         if (otherUsers.length > 0) {
             usersListEl.textContent = otherUsers.join(', ');
-            usersListEl.style.display = 'inline';
-            console.log('Подключены:', otherUsers);
         } else {
-            usersListEl.textContent = 'ожидание...';
-            usersListEl.style.display = 'inline';
+            usersListEl.textContent = 'ожидание других...';
         }
     }
 
@@ -438,14 +485,6 @@ class CollaborativeShoppingList {
             }
         } catch (err) {
             this.showNotification('❌ Ошибка копирования');
-        }
-    }
-
-    updateShareInfo() {
-        const shareInfo = document.getElementById('share-info');
-        if (shareInfo && this.listId) {
-            shareInfo.style.display = 'flex';
-            this.updateUsersList();
         }
     }
 
@@ -642,6 +681,7 @@ class CollaborativeShoppingList {
         this.items = [];
         this.lastUpdate = Date.now();
         this.lastSavedAt = 0;
+        this.showShareInfo();
         this.render();
     }
 }

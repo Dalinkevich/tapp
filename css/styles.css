@@ -109,6 +109,47 @@ body {
     transition: width 0.3s ease-out;
 }
 
+/* Share Info - ВАЖНО: стили для плашки совместного доступа */
+.share-info {
+    display: none;
+    padding: 10px 16px;
+    background: rgba(76, 175, 80, 0.15);
+    border-top: 1px solid rgba(76, 175, 80, 0.3);
+    margin-top: 12px;
+    border-radius: 8px;
+}
+
+.share-info.visible {
+    display: block !important;
+}
+
+.share-badge-container {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.share-badge {
+    color: var(--success-color);
+    font-weight: 600;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.users-list {
+    color: var(--tg-theme-hint-color);
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.users-list::before {
+    content: "•";
+    margin-right: 6px;
+    color: var(--success-color);
+}
+
 /* Add Form */
 .add-form {
     display: flex;
@@ -401,39 +442,6 @@ body {
     50% { opacity: 1; }
 }
 
-.share-info {
-    display: flex;
-    flex-direction: column;
-    padding: 8px 16px;
-    background: rgba(76, 175, 80, 0.1);
-    border-top: 1px solid rgba(76, 175, 80, 0.2);
-    font-size: 13px;
-}
-
-.share-badge-container {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    flex-wrap: wrap;
-}
-
-.share-badge {
-    color: var(--success-color);
-    font-weight: 600;
-}
-
-.users-list {
-    color: var(--tg-theme-hint-color);
-    font-size: 12px;
-}
-
-.users-list::before {
-    content: "•";
-    margin-right: 6px;
-    color: var(--success-color);
-}
-
 /* Item improvements */
 .item-content {
     flex: 1;
@@ -547,41 +555,4 @@ body {
         opacity: 1;
         transform: translateX(-50%) translateY(0);
     }
-}
-
-/* User avatars in header */
-.connected-users {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    margin-left: 8px;
-}
-
-.user-avatar-small {
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    background: var(--tg-theme-button-color);
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 10px;
-    font-weight: bold;
-    border: 2px solid var(--tg-theme-bg-color);
-    margin-left: -8px;
-}
-
-.user-avatar-small:first-child {
-    margin-left: 0;
-}
-
-.users-count-badge {
-    background: var(--success-color);
-    color: white;
-    padding: 2px 8px;
-    border-radius: 12px;
-    font-size: 11px;
-    font-weight: 600;
-    margin-left: 4px;
 }
