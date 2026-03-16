@@ -26,14 +26,17 @@
                 <div class="progress-bar" id="progress-bar" style="width: 0%"></div>
             </div>
             <div class="share-info" id="share-info" style="display: none;">
-                <span class="share-badge">👥 Совместный доступ</span>
+                <div class="share-badge-container">
+                    <span class="share-badge">👥 Совместный доступ</span>
+                    <span class="users-list" id="users-list"></span>
+                </div>
             </div>
         </header>
 
         <div class="add-form">
             <input type="text" class="input-field" id="item-input" placeholder="Добавить товар..." maxlength="50">
-            <button class="cancel-btn" id="cancel-btn">✕</button>
             <button class="add-btn" id="add-btn">+</button>
+            <button class="cancel-btn" id="cancel-btn">✕</button>
         </div>
 
         <main class="main-content" id="main-content">

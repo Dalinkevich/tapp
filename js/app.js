@@ -9,6 +9,7 @@ class CollaborativeShoppingList {
         this.lastUpdate = 0;
         this.lastSavedAt = 0;        
         this.firebaseUrl = 'https://database-7a0a8-default-rtdb.europe-west1.firebasedatabase.app/';
+        this.connectedUsers = new Map(); // Храним подключённых пользователей
         
         this.init();
     }
@@ -102,11 +103,33 @@ class CollaborativeShoppingList {
         this.pendingListId = null;
         this.saveListId();
         
+        // Регистрируем себя в списке пользователей
+        await this.registerUser();
+        
         await this.loadFromFirebase();
         
         this.showNotification('👥 Вы присоединились к списку!');
         this.render();
         this.updateShareInfo();
+    }
+
+    async registerUser() {
+        if (!this.listId || !this.userId) return;
+        
+        const userData = {
+            name: this.userName,
+            joinedAt: Date.now(),
+            lastActive: Date.now()
+        };
+        
+        try {
+            await fetch(`${this.firebaseUrl}/lists/${this.listId}/users/${this.userId}.json`, {
+                method: 'PUT',
+                body: JSON.stringify(userData)
+            });
+        } catch (e) {
+            console.error('Ошибка регистрации пользователя:', e);
+        }
     }
 
     async loadFromFirebase() {
@@ -124,6 +147,12 @@ class CollaborativeShoppingList {
             } else {
                 this.items = [];
                 this.lastUpdate = Date.now();
+            }
+            
+            // Загружаем список пользователей
+            if (data && data.users) {
+                this.connectedUsers = new Map(Object.entries(data.users));
+                this.updateUsersList();
             }
         } catch (e) {
             console.error('Ошибка загрузки из Firebase:', e);
@@ -163,7 +192,18 @@ class CollaborativeShoppingList {
                 const response = await fetch(`${this.firebaseUrl}/lists/${this.listId}.json`);
                 const data = await response.json();
                 
-                if (!data || !data.items) return;
+                if (!data) return;
+                
+                // Обновляем пользователей
+                if (data.users) {
+                    const newUsers = new Map(Object.entries(data.users));
+                    if (this.hasUsersChanged(newUsers)) {
+                        this.connectedUsers = newUsers;
+                        this.updateUsersList();
+                    }
+                }
+                
+                if (!data.items) return;
                 
                 const serverTime = data.updatedAt || 0;
                 
@@ -178,10 +218,38 @@ class CollaborativeShoppingList {
                     this.items = data.items;
                     this.lastUpdate = serverTime;
                     this.render();
-                    this.showNotification('🔄Список обновлён!', 1000);
+                    this.showNotification('🔄 Список обновлён!', 1000);
                 }
             } catch (e) {}
         }, 2000);
+    }
+
+    hasUsersChanged(newUsers) {
+        if (this.connectedUsers.size !== newUsers.size) return true;
+        for (let [id, user] of newUsers) {
+            if (!this.connectedUsers.has(id)) return true;
+            if (this.connectedUsers.get(id).name !== user.name) return true;
+        }
+        return false;
+    }
+
+    updateUsersList() {
+        const usersListEl = document.getElementById('users-list');
+        if (!usersListEl) return;
+        
+        const otherUsers = [];
+        for (let [id, user] of this.connectedUsers) {
+            if (id !== this.userId && user.name) {
+                otherUsers.push(user.name);
+            }
+        }
+        
+        if (otherUsers.length > 0) {
+            usersListEl.textContent = otherUsers.join(', ');
+            usersListEl.style.display = 'inline';
+        } else {
+            usersListEl.style.display = 'none';
+        }
     }
 
     cloudStorageGet(key) {
@@ -248,7 +316,11 @@ class CollaborativeShoppingList {
         const input = document.getElementById('item-input');
         const cancelBtn = document.getElementById('cancel-btn');
         if (cancelBtn) {
-            cancelBtn.style.display = input.value.length > 0 ? 'flex' : 'none';
+            if (input.value.length > 0) {
+                cancelBtn.classList.add('visible');
+            } else {
+                cancelBtn.classList.remove('visible');
+            }
         }
     }
 
@@ -341,6 +413,7 @@ class CollaborativeShoppingList {
         const shareInfo = document.getElementById('share-info');
         if (shareInfo && this.listId) {
             shareInfo.style.display = 'flex';
+            this.updateUsersList();
         }
     }
 

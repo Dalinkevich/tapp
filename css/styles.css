@@ -149,10 +149,37 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
+    order: 1;
 }
 
 .add-btn:active {
     transform: scale(0.95);
+}
+
+.cancel-btn {
+    width: 48px;
+    height: 48px;
+    border: none;
+    border-radius: var(--border-radius);
+    background: var(--danger-color);
+    color: white;
+    font-size: 20px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    order: 2;
+}
+
+.cancel-btn.visible {
+    display: flex;
+}
+
+.cancel-btn:active {
+    transform: scale(0.95);
+    opacity: 0.8;
 }
 
 /* Main Content */
@@ -308,32 +335,6 @@ body {
     -webkit-backdrop-filter: blur(10px);
 }
 
-.cancel-btn {
-    width: 48px;
-    height: 48px;
-    border: none;
-    border-radius: var(--border-radius);
-    background: var(--danger-color);
-    color: white;
-    font-size: 20px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: var(--transition);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-}
-
-.cancel-btn:active {
-    transform: scale(0.95);
-    opacity: 0.8;
-}
-
-.cancel-btn.visible {
-    display: flex;
-}
-
 .clear-btn {
     flex: 1;
     padding: 14px;
@@ -402,12 +403,19 @@ body {
 
 .share-info {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    flex-direction: column;
     padding: 8px 16px;
     background: rgba(76, 175, 80, 0.1);
     border-top: 1px solid rgba(76, 175, 80, 0.2);
     font-size: 13px;
+}
+
+.share-badge-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
 }
 
 .share-badge {
@@ -415,8 +423,15 @@ body {
     font-weight: 600;
 }
 
-.users-count {
+.users-list {
     color: var(--tg-theme-hint-color);
+    font-size: 12px;
+}
+
+.users-list::before {
+    content: "•";
+    margin-right: 6px;
+    color: var(--success-color);
 }
 
 /* Item improvements */
@@ -521,137 +536,6 @@ body {
 }
 
 /* Notification */
-.notification {
-    position: fixed;
-    top: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: var(--tg-theme-button-color);
-    color: var(--tg-theme-button-text-color);
-    padding: 12px 24px;
-    border-radius: 24px;
-    font-weight: 500;
-    z-index: 9999;
-    animation: slideDown 0.3s ease-out;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-}
-
-.notification.fade-out {
-    opacity: 0;
-    transition: opacity 0.3s;
-}
-
-@keyframes slideDown {
-    from {
-        opacity: 0;
-        transform: translateX(-50%) translateY(-20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateX(-50%) translateY(0);
-    }
-}
-
-.header-actions {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-.sync-status {
-    font-size: 20px;
-}
-
-.share-info {
-    display: flex;
-    justify-content: center;
-    padding: 8px;
-    background: rgba(76, 175, 80, 0.1);
-    border-top: 1px solid rgba(76, 175, 80, 0.2);
-    font-size: 13px;
-}
-
-.share-badge {
-    color: var(--success-color);
-    font-weight: 600;
-}
-
-.item-content {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-
-.item-meta {
-    font-size: 12px;
-    color: var(--tg-theme-hint-color);
-}
-
-.item-meta.purchased-by {
-    color: var(--success-color);
-    font-weight: 500;
-}
-
-.modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-    padding: 20px;
-}
-
-.modal-content {
-    background: var(--tg-theme-bg-color);
-    border-radius: var(--border-radius);
-    padding: 24px;
-    max-width: 320px;
-    width: 100%;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-}
-
-.modal-content h3 {
-    margin-bottom: 12px;
-    font-size: 18px;
-}
-
-.modal-content p {
-    color: var(--tg-theme-hint-color);
-    margin-bottom: 20px;
-    line-height: 1.5;
-}
-
-.modal-actions {
-    display: flex;
-    gap: 12px;
-}
-
-.modal-btn {
-    flex: 1;
-    padding: 12px;
-    border-radius: var(--border-radius);
-    border: none;
-    font-size: 16px;
-    font-weight: 600;
-    cursor: pointer;
-}
-
-.modal-btn.secondary {
-    background: var(--tg-theme-secondary-bg-color);
-    color: var(--tg-theme-text-color);
-}
-
-.modal-btn.primary {
-    background: var(--tg-theme-button-color);
-    color: var(--tg-theme-button-text-color);
-}
-
 .notification {
     position: fixed;
     top: 20px;
