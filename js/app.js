@@ -454,15 +454,14 @@ class CollaborativeShoppingList {
         
         modal.classList.remove('hidden');
         
-        // Кнопка "Копировать"
+        // Кнопка "Копировать" — показывает уведомление
         const copyBtn = document.getElementById('modal-copy-btn');
         copyBtn.onclick = async () => {
             await this.copyToClipboard(inviteLink);
-            // Показываем тост "Ссылка скопирована"
             this.showNotification('📋 Ссылка скопирована');
         };
         
-        // Кнопка "Отправить в чаты"
+        // Кнопка "В чаты" — НЕ показывает уведомление при закрытии
         const shareBtn = document.getElementById('share-modal-confirm');
         shareBtn.onclick = async () => {
             modal.classList.add('hidden');
@@ -483,18 +482,13 @@ class CollaborativeShoppingList {
                     }
                 }
             }
-            
-            await this.copyToClipboard(inviteLink);
-            this.showNotification('📋 Ссылка скопирована');
         };
         
-        // Кнопка "Закрыть"
         const closeBtn = document.getElementById('share-modal-cancel');
         closeBtn.onclick = () => {
             modal.classList.add('hidden');
         };
         
-        // Закрытие по клику вне окна
         modal.onclick = (e) => {
             if (e.target === modal) {
                 modal.classList.add('hidden');
