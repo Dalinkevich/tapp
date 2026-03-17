@@ -416,21 +416,28 @@ class CollaborativeShoppingList {
     async clearAll() {
         if (this.items.length === 0) return;
         
-        this.tg.showPopup({
-            title: 'Очистить список?',
-            message: 'Все товары будут удалены для всех участников.',
-            buttons: [
-                { id: 'cancel', type: 'cancel', text: 'Отмена' },
-                { id: 'clear', type: 'destructive', text: 'Очистить' }
-            ]
-        }, async (buttonId) => {
-            if (buttonId === 'clear') {
-                this.items = [];
-                await this.saveToFirebase();
-                this.haptic('success');
-                this.render();
+        const modal = document.getElementById('clear-modal');
+        if (!modal) return;
+        
+        modal.classList.remove('hidden');
+        
+        document.getElementById('clear-cancel').onclick = () => {
+            modal.classList.add('hidden');
+        };
+        
+        document.getElementById('clear-confirm').onclick = async () => {
+            modal.classList.add('hidden');
+            this.items = [];
+            await this.saveToFirebase();
+            this.haptic('success');
+            this.render();
+        };
+        
+        modal.onclick = (e) => {
+            if (e.target === modal) {
+                modal.classList.add('hidden');
             }
-        });
+        };
     }
 
     shareList() {
@@ -443,68 +450,62 @@ class CollaborativeShoppingList {
         const inviteLink = `https://t.me/${botUsername}?startapp=${this.listId}`;
         
         const modal = document.getElementById('share-modal');
-        const linkText = document.getElementById('share-link-text');
-        const copyBtn = document.getElementById('modal-copy-btn');
+        if (!modal) return;
         
-        if (modal && linkText) {
-            linkText.textContent = inviteLink;
-            modal.classList.remove('hidden');
+        modal.classList.remove('hidden');
+        
+        // Кнопка "Копировать"
+        const copyBtn = document.getElementById('modal-copy-btn');
+        copyBtn.onclick = async () => {
+            await this.copyToClipboard(inviteLink);
+            // Показываем тост "Ссылка скопирована"
+            this.showNotification('📋 Ссылка скопирована');
+        };
+        
+        // Кнопка "Отправить в чаты"
+        const shareBtn = document.getElementById('share-modal-confirm');
+        shareBtn.onclick = async () => {
+            modal.classList.add('hidden');
             
-            const copyHandler = async () => {
-                await this.copyToClipboard(inviteLink);
-                copyBtn.innerHTML = '✅ Скопировано!';
-                setTimeout(() => {
-                    copyBtn.innerHTML = `
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                        </svg>
-                        Копировать`;
-                }, 2000);
-            };
-            
-            copyBtn.onclick = copyHandler;
-            
-            document.getElementById('share-modal-cancel').onclick = () => {
-                modal.classList.add('hidden');
-            };
-            
-            document.getElementById('share-modal-confirm').onclick = async () => {
-                modal.classList.add('hidden');
-                
-                if (navigator.share) {
-                    try {
-                        await navigator.share({
-                            title: '🛒 Список покупок',
-                            text: 'Присоединяйся к совместному списку покупок!',
-                            url: inviteLink
-                        });
-                        this.haptic('success');
-                        return;
-                    } catch (e) {
-                        if (e.name !== 'AbortError') {
-                            await this.copyToClipboard(inviteLink);
-                        }
+            if (navigator.share) {
+                try {
+                    await navigator.share({
+                        title: '🛒 Список покупок',
+                        text: 'Присоединяйся к совместному списку покупок!',
+                        url: inviteLink
+                    });
+                    this.haptic('success');
+                    return;
+                } catch (e) {
+                    if (e.name !== 'AbortError') {
+                        await this.copyToClipboard(inviteLink);
+                        this.showNotification('📋 Ссылка скопирована');
                     }
                 }
-                
-                await this.copyToClipboard(inviteLink);
-                this.showNotification('📋 Ссылка скопирована — вставьте в чат!');
-            };
+            }
             
-            modal.onclick = (e) => {
-                if (e.target === modal) {
-                    modal.classList.add('hidden');
-                }
-            };
-        }
+            await this.copyToClipboard(inviteLink);
+            this.showNotification('📋 Ссылка скопирована');
+        };
+        
+        // Кнопка "Закрыть"
+        const closeBtn = document.getElementById('share-modal-cancel');
+        closeBtn.onclick = () => {
+            modal.classList.add('hidden');
+        };
+        
+        // Закрытие по клику вне окна
+        modal.onclick = (e) => {
+            if (e.target === modal) {
+                modal.classList.add('hidden');
+            }
+        };
     }
 
     async copyToClipboard(text) {
         try {
             if (navigator.clipboard && navigator.clipboard.writeText) {
                 await navigator.clipboard.writeText(text);
-                this.showNotification('📋 Ссылка скопирована!');
             } else {
                 const textarea = document.createElement('textarea');
                 textarea.value = text;
@@ -514,10 +515,9 @@ class CollaborativeShoppingList {
                 textarea.select();
                 document.execCommand('copy');
                 document.body.removeChild(textarea);
-                this.showNotification('📋 Ссылка скопирована!');
             }
         } catch (err) {
-            this.showNotification('❌ Ошибка копирования');
+            console.error('Ошибка копирования:', err);
         }
     }
 
