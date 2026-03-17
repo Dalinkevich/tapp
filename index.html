@@ -2,70 +2,392 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="format-detection" content="telephone=no">
-    <title>Совместный список покупок</title>
+    <meta name="theme-color" content="#667eea" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#0f0f11" media="(prefers-color-scheme: dark)">
+    <meta name="description" content="Совместный список покупок в Telegram">
     
+    <!-- Telegram WebApp -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    
+    <!-- Preconnect для производительности -->
+    <link rel="preconnect" href="https://database-7a0a8-default-rtdb.europe-west1.firebasedatabase.app">
+    
+    <!-- Стили -->
     <link rel="stylesheet" href="css/styles.css">
+    
+    <!-- Иконки -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛒</text></svg>">
+    
+    <title>🛒 Список покупок</title>
+    
+    <!-- iOS PWA support -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Список покупок">
 </head>
-<body>
+<body data-theme="light">
     <div class="app-container">
+        
+        <!-- ===== HEADER ===== -->
         <header class="header">
             <div class="header-content">
                 <div class="title-section">
-                    <h1>🛒 Список покупок</h1>
-                    <p class="progress-text" id="progress-text">0 из 0 куплено</p>
+                    <h1>
+                        <span class="title-icon">🛒</span>
+                        <span class="title-text">Список покупок</span>
+                    </h1>
+                    <p class="progress-text" id="progress-text">
+                        <span class="progress-numbers">0 из 0</span> куплено
+                    </p>
                 </div>
+                
                 <div class="header-actions">
-                    <span class="sync-status" id="sync-status"></span>
-                    <button class="theme-toggle" id="theme-toggle">🌓</button>
+                    <!-- Статус синхронизации -->
+                    <span class="sync-status" id="sync-status">
+                        <span class="sync-icon">🔄</span>
+                    </span>
+                    
+                    <!-- Переключатель темы -->
+                    <button 
+                        class="theme-toggle" 
+                        id="theme-toggle" 
+                        type="button"
+                    >
+                        <span class="theme-icon light">☀️</span>
+                        <span class="theme-icon dark">🌙</span>
+                    </button>
                 </div>
             </div>
+            
+            <!-- Progress bar с анимацией -->
             <div class="progress-bar-container">
                 <div class="progress-bar" id="progress-bar" style="width: 0%"></div>
             </div>
+            
             <!-- Плашка совместного доступа -->
-            <div class="share-info" id="share-info" style="display: none;">
+            <div class="share-info" id="share-info" hidden>
                 <div class="share-badge-container">
-                    <span class="share-badge">👥 Совместный доступ</span>
+                    <span class="share-badge">
+                        <svg class="badge-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="9" cy="7" r="4"></circle>
+                            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                        </svg>
+                        Совместный доступ
+                    </span>
                     <span class="users-list" id="users-list">ожидание...</span>
                 </div>
             </div>
         </header>
 
-        <div class="add-form">
-            <input type="text" class="input-field" id="item-input" placeholder="Добавить товар..." maxlength="50">
-            <button class="add-btn" id="add-btn">+</button>
-            <button class="cancel-btn" id="cancel-btn">✕</button>
-        </div>
+        <!-- ===== FORM ADD ITEM ===== -->
+        <form class="add-form" id="add-form">
+            <input 
+                type="text" 
+                class="input-field" 
+                id="item-input" 
+                placeholder="Добавить товар..." 
+                maxlength="50"
+                autocomplete="off"
+                autocorrect="off"
+                autocapitalize="sentences"
+                enterkeyhint="done"
+            >
+            
+            <button type="button" class="add-btn" id="add-btn">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+            </button>
+            
+            <button type="button" class="cancel-btn" id="cancel-btn" hidden>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </form>
 
+        <!-- ===== MAIN CONTENT ===== -->
         <main class="main-content" id="main-content">
+            
+            <!-- Empty state -->
             <div class="empty-state" id="empty-state">
-                <div class="empty-icon">📝</div>
+                <div class="empty-icon">
+                    <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                        <polyline points="10 9 9 9 8 9"></polyline>
+                    </svg>
+                </div>
                 <h3>Список пуст</h3>
                 <p>Добавьте товары или присоединитесь к списку друга</p>
+                
+                <!-- Quick actions для пустого состояния -->
+                <div class="empty-actions">
+                    <button class="empty-btn primary" id="empty-add-btn" type="button">
+                        <span>✨</span> Добавить первый товар
+                    </button>
+                    <button class="empty-btn secondary" id="empty-share-btn" type="button">
+                        <span>🔗</span> Получить ссылку
+                    </button>
+                </div>
             </div>
+            
+            <!-- Shopping list -->
             <div class="shopping-list hidden" id="shopping-list"></div>
+            
+            <!-- Skeleton loader (показывается при загрузке) -->
+            <div class="skeleton-list hidden" id="skeleton-list">
+                <div class="skeleton-item"></div>
+                <div class="skeleton-item"></div>
+                <div class="skeleton-item short"></div>
+            </div>
+            
         </main>
 
+        <!-- ===== BOTTOM ACTIONS ===== -->
         <div class="bottom-actions">
-            <button class="clear-btn" id="clear-btn">Очистить всё</button>
-            <button class="share-btn" id="share-btn">Поделиться</button>
+            <button class="clear-btn" id="clear-btn" type="button">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                </svg>
+                <span>Очистить</span>
+            </button>
+            
+            <button class="share-btn" id="share-btn" type="button">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="18" cy="5" r="3"></circle>
+                    <circle cx="6" cy="12" r="3"></circle>
+                    <circle cx="18" cy="19" r="3"></circle>
+                    <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                    <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                </svg>
+                <span>Поделиться</span>
+            </button>
         </div>
 
+        <!-- ===== MODAL: JOIN LIST ===== -->
         <div class="modal hidden" id="join-modal">
             <div class="modal-content">
+                <div class="modal-icon">🤝</div>
                 <h3>Присоединиться к списку?</h3>
-                <p>Вы увидите товары, которые добавил другой пользователь, и сможете отмечать их вместе.</p>
+                <p>Вы увидите товары, которые добавил другой пользователь, и сможете отмечать их вместе в реальном времени.</p>
+                
                 <div class="modal-actions">
-                    <button class="modal-btn secondary" id="modal-cancel">Отмена</button>
-                    <button class="modal-btn primary" id="modal-confirm">Присоединиться</button>
+                    <button class="modal-btn secondary" id="modal-cancel" type="button">Отмена</button>
+                    <button class="modal-btn primary" id="modal-confirm" type="button">Присоединиться</button>
                 </div>
             </div>
         </div>
+
+        <!-- ===== MODAL: CONFIRM CLEAR ===== -->
+        <div class="modal hidden" id="clear-modal">
+            <div class="modal-content">
+                <div class="modal-icon danger">⚠️</div>
+                <h3>Очистить список?</h3>
+                <p>Все товары будут удалены для всех участников. Это действие нельзя отменить.</p>
+                
+                <div class="modal-actions">
+                    <button class="modal-btn secondary" id="clear-cancel" type="button">Отмена</button>
+                    <button class="modal-btn danger" id="clear-confirm" type="button">Удалить всё</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== TOAST CONTAINER ===== -->
+        <div id="toast-container" class="toast-container"></div>
+        
     </div>
 
+    <!-- App script -->
     <script src="js/app.js"></script>
+    
+    <!-- Inline critical styles for faster first paint -->
+    <style>
+        /* Skeleton loader animation */
+        .skeleton-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            padding: 16px;
+        }
+        
+        .skeleton-item {
+            height: 72px;
+            background: var(--tg-theme-secondary-bg-color);
+            border-radius: 20px;
+            animation: skeleton-pulse 1.5s ease-in-out infinite;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .skeleton-item::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+            animation: skeleton-shimmer 1.5s infinite;
+        }
+        
+        .skeleton-item.short {
+            height: 56px;
+        }
+        
+        @keyframes skeleton-pulse {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 0.3; }
+        }
+        
+        @keyframes skeleton-shimmer {
+            100% { left: 100%; }
+        }
+        
+        /* Empty state buttons */
+        .empty-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 24px;
+            padding: 0 20px;
+        }
+        
+        .empty-btn {
+            padding: 14px 20px;
+            border-radius: 16px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: transform 0.2s ease;
+            border: none;
+        }
+        
+        .empty-btn:active {
+            transform: scale(0.98);
+        }
+        
+        .empty-btn.primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .empty-btn.secondary {
+            background: var(--tg-theme-secondary-bg-color);
+            color: var(--tg-theme-text-color);
+            border: 2px solid var(--tg-theme-hint-color);
+        }
+        
+        /* Toast container */
+        .toast-container {
+            position: fixed;
+            top: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10000;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            pointer-events: none;
+        }
+        
+        /* Modal icon */
+        .modal-icon {
+            font-size: 48px;
+            text-align: center;
+            margin-bottom: 16px;
+            display: block;
+        }
+        
+        .modal-icon.danger {
+            animation: shake 0.5s ease-in-out;
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        
+        /* Danger button variant */
+        .modal-btn.danger {
+            background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%);
+            color: white;
+        }
+        
+        /* Title with icon */
+        .title-icon {
+            margin-right: 8px;
+            display: inline-block;
+            animation: titleBounce 2s ease-in-out infinite;
+        }
+        
+        @keyframes titleBounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-3px); }
+        }
+        
+        /* Theme toggle icons */
+        .theme-icon {
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+        
+        [data-theme="dark"] .theme-icon.light {
+            opacity: 0;
+            transform: scale(0.8);
+        }
+        
+        [data-theme="light"] .theme-icon.dark {
+            opacity: 0;
+            transform: scale(0.8);
+        }
+        
+        /* Badge icon */
+        .badge-icon {
+            vertical-align: -2px;
+            margin-right: 4px;
+        }
+        
+        /* Sync status animation */
+        .sync-icon {
+            display: inline-block;
+            animation: syncSpin 2s linear infinite;
+        }
+        
+        @keyframes syncSpin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Reduce motion preference */
+        @media (prefers-reduced-motion: reduce) {
+            *,
+            *::before,
+            *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+                scroll-behavior: auto !important;
+            }
+            
+            .sync-icon,
+            .title-icon {
+                animation: none !important;
+            }
+        }
+    </style>
 </body>
 </html>
