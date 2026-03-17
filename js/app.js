@@ -5,9 +5,9 @@ class CollaborativeShoppingList {
         this.items = [];
         this.listId = null;
         this.userId = null;
-        this.userName = null;       
+        this.userName = null;
         this.lastUpdate = 0;
-        this.lastSavedAt = 0;        
+        this.lastSavedAt = 0;
         this.firebaseUrl = 'https://database-7a0a8-default-rtdb.europe-west1.firebasedatabase.app/';
         this.connectedUsers = new Map();
         this.myPresenceInterval = null;
@@ -37,10 +37,8 @@ class CollaborativeShoppingList {
         
         await this.loadOrCreateList();
         
-        // ВАЖНО: Показываем плашку сразу после загрузки списка
         this.showShareInfo();
         
-        // Регистрируем пользователя в списке
         await this.registerUser();
         
         this.startRealtimeSync();
@@ -66,7 +64,6 @@ class CollaborativeShoppingList {
 
     checkInvitation() {
         const initData = this.tg.initDataUnsafe;
-        
         if (initData?.start_param) {
             console.log('Приглашение получено:', initData.start_param);
             this.pendingListId = initData.start_param;
@@ -165,7 +162,6 @@ class CollaborativeShoppingList {
     }
 
     startPresenceUpdates() {
-        // Обновляем lastActive каждые 10 секунд
         this.myPresenceInterval = setInterval(async () => {
             if (!this.listId || !this.userId) return;
             
@@ -199,7 +195,6 @@ class CollaborativeShoppingList {
                 this.lastUpdate = Date.now();
             }
             
-            // Загружаем пользователей
             if (data && data.users) {
                 console.log('Загружены пользователи:', Object.keys(data.users));
                 this.connectedUsers = new Map(Object.entries(data.users));
@@ -249,13 +244,11 @@ class CollaborativeShoppingList {
                 
                 if (!data) return;
                 
-                // Обновляем пользователей
                 if (data.users) {
                     const now = Date.now();
                     const activeUsers = new Map();
                     
                     for (let [id, user] of Object.entries(data.users)) {
-                        // Считаем активными пользователей, которые обновлялись < 2 минут назад
                         if (user.lastActive && (now - user.lastActive) < 120000) {
                             activeUsers.set(id, user);
                         }
@@ -268,7 +261,6 @@ class CollaborativeShoppingList {
                     }
                 }
                 
-                // Проверяем обновления товаров
                 if (!data.items) return;
                 
                 const serverTime = data.updatedAt || 0;
@@ -300,7 +292,6 @@ class CollaborativeShoppingList {
         return false;
     }
 
-    // ВАЖНО: Новый метод для показа плашки
     showShareInfo() {
         const shareInfo = document.getElementById('share-info');
         if (shareInfo && this.listId) {
@@ -452,19 +443,48 @@ class CollaborativeShoppingList {
 
         const botUsername = 'perdakluv_bot';
         const inviteLink = `https://t.me/${botUsername}?startapp=${this.listId}`;
-
-        this.tg.showPopup({
-            title: '📤 Поделиться списком',
-            message: `Отправьте эту ссылку другу:\n\n${inviteLink}`,
-            buttons: [
-                { id: 'copy', type: 'default', text: '📋 Копировать' },
-                { id: 'close', type: 'cancel', text: 'Закрыть' }
-            ]
-        }, (buttonId) => {
-            if (buttonId === 'copy') {
-                this.copyToClipboard(inviteLink);
-            }
-        });
+        
+        // Показываем кастомное модальное окно
+        const modal = document.getElementById('share-modal');
+        const linkText = document.getElementById('share-link-text');
+        const copyBtn = document.getElementById('modal-copy-btn');
+        
+        if (modal && linkText) {
+            linkText.textContent = inviteLink;
+            modal.classList.remove('hidden');
+            
+            // Обработчик копирования
+            const copyHandler = async () => {
+                await this.copyToClipboard(inviteLink);
+                copyBtn.innerHTML = '✅ Скопировано!';
+                setTimeout(() => {
+                    copyBtn.innerHTML = `
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                        </svg>
+                        Копировать`;
+                }, 2000);
+            };
+            
+            copyBtn.onclick = copyHandler;
+            
+            document.getElementById('share-modal-cancel').onclick = () => {
+                modal.classList.add('hidden');
+            };
+            
+            document.getElementById('share-modal-confirm').onclick = () => {
+                this.tg.openTelegramLink(inviteLink);
+                modal.classList.add('hidden');
+            };
+            
+            // Закрытие по клику вне окна
+            modal.onclick = (e) => {
+                if (e.target === modal) {
+                    modal.classList.add('hidden');
+                }
+            };
+        }
     }
 
     async copyToClipboard(text) {
@@ -620,7 +640,6 @@ class CollaborativeShoppingList {
             input.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') this.addItem();
             });
-            
             input.addEventListener('input', () => this.updateCancelButton());
         }
 
@@ -672,6 +691,24 @@ class CollaborativeShoppingList {
                 e.preventDefault();
                 e.stopPropagation();
                 this.shareList();
+            });
+        }
+
+        const emptyAddBtn = document.getElementById('empty-add-btn');
+        if (emptyAddBtn) {
+            emptyAddBtn.addEventListener('click', () => {
+                const input = document.getElementById('item-input');
+                input.focus();
+                this.haptic('selection');
+            });
+        }
+
+        const emptyShareBtn = document.getElementById('empty-share-btn');
+        if (emptyShareBtn) {
+            emptyShareBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.shareList();
+                this.haptic('selection');
             });
         }
     }

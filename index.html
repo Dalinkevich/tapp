@@ -127,23 +127,13 @@
                     </svg>
                 </div>
                 <h3>Список пуст</h3>
-                <p>Добавьте товары или присоединитесь к списку друга</p>
-                
-                <!-- Quick actions для пустого состояния -->
-                <div class="empty-actions">
-                    <button class="empty-btn primary" id="empty-add-btn" type="button">
-                        <span>✨</span> Добавить первый товар
-                    </button>
-                    <button class="empty-btn secondary" id="empty-share-btn" type="button">
-                        <span>🔗</span> Получить ссылку
-                    </button>
-                </div>
+                <p>Добавьте товары или присоединитесь к списку друга</p>                
             </div>
             
             <!-- Shopping list -->
             <div class="shopping-list hidden" id="shopping-list"></div>
             
-            <!-- Skeleton loader (показывается при загрузке) -->
+            <!-- Skeleton loader -->
             <div class="skeleton-list hidden" id="skeleton-list">
                 <div class="skeleton-item"></div>
                 <div class="skeleton-item"></div>
@@ -202,6 +192,36 @@
             </div>
         </div>
 
+        <div class="modal hidden" id="share-modal">
+            <div class="modal-content share-modal">
+                <div class="modal-icon gradient">🔗</div>
+                <h3>Пригласить в список</h3>
+                <p>Отправьте эту ссылку другу, чтобы он мог добавлять товары вместе с вами:</p>
+                
+                <div class="share-link-box">
+                    <code id="share-link-text">https://t.me/.../startapp=...</code>
+                    <button class="copy-btn" id="modal-copy-btn" type="button">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                        </svg>
+                        Копировать
+                    </button>
+                </div>
+                
+                <div class="modal-actions">
+                    <button class="modal-btn secondary" id="share-modal-cancel" type="button">Закрыть</button>
+                    <button class="modal-btn primary" id="share-modal-confirm" type="button">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M22 2L11 13"></path>
+                            <path d="M22 2l-7 20-4-9-9-4 20-7z"></path>
+                        </svg>
+                        Открыть Telegram
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- ===== TOAST CONTAINER ===== -->
         <div id="toast-container" class="toast-container"></div>
         
@@ -253,13 +273,8 @@
             100% { left: 100%; }
         }
         
-        /* Empty state buttons */
         .empty-actions {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            margin-top: 24px;
-            padding: 0 20px;
+            display: none;
         }
         
         .empty-btn {
