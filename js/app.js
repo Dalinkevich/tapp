@@ -36,9 +36,7 @@ class CollaborativeShoppingList {
         this.setupEventListeners();
         
         await this.loadOrCreateList();
-        
         this.showShareInfo();
-        
         await this.registerUser();
         
         this.startRealtimeSync();
@@ -444,7 +442,6 @@ class CollaborativeShoppingList {
         const botUsername = 'perdakluv_bot';
         const inviteLink = `https://t.me/${botUsername}?startapp=${this.listId}`;
         
-        // Показываем кастомное модальное окно
         const modal = document.getElementById('share-modal');
         const linkText = document.getElementById('share-link-text');
         const copyBtn = document.getElementById('modal-copy-btn');
@@ -453,7 +450,6 @@ class CollaborativeShoppingList {
             linkText.textContent = inviteLink;
             modal.classList.remove('hidden');
             
-            // Обработчик копирования
             const copyHandler = async () => {
                 await this.copyToClipboard(inviteLink);
                 copyBtn.innerHTML = '✅ Скопировано!';
@@ -473,12 +469,29 @@ class CollaborativeShoppingList {
                 modal.classList.add('hidden');
             };
             
-            document.getElementById('share-modal-confirm').onclick = () => {
-                this.tg.openTelegramLink(inviteLink);
+            document.getElementById('share-modal-confirm').onclick = async () => {
                 modal.classList.add('hidden');
+                
+                if (navigator.share) {
+                    try {
+                        await navigator.share({
+                            title: '🛒 Список покупок',
+                            text: 'Присоединяйся к совместному списку покупок!',
+                            url: inviteLink
+                        });
+                        this.haptic('success');
+                        return;
+                    } catch (e) {
+                        if (e.name !== 'AbortError') {
+                            await this.copyToClipboard(inviteLink);
+                        }
+                    }
+                }
+                
+                await this.copyToClipboard(inviteLink);
+                this.showNotification('📋 Ссылка скопирована — вставьте в чат!');
             };
             
-            // Закрытие по клику вне окна
             modal.onclick = (e) => {
                 if (e.target === modal) {
                     modal.classList.add('hidden');
@@ -552,7 +565,9 @@ class CollaborativeShoppingList {
         return `
             <div class="item ${item.purchased ? 'purchased' : ''}" onclick="app.toggleItem('${item.id}')">
                 <div class="checkbox">
-                    <span class="checkbox-check">✓</span>
+                    <svg class="checkbox-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
                 </div>
                 <div class="item-content">
                     <span class="item-text">${this.escapeHtml(item.text)}</span>
@@ -691,24 +706,6 @@ class CollaborativeShoppingList {
                 e.preventDefault();
                 e.stopPropagation();
                 this.shareList();
-            });
-        }
-
-        const emptyAddBtn = document.getElementById('empty-add-btn');
-        if (emptyAddBtn) {
-            emptyAddBtn.addEventListener('click', () => {
-                const input = document.getElementById('item-input');
-                input.focus();
-                this.haptic('selection');
-            });
-        }
-
-        const emptyShareBtn = document.getElementById('empty-share-btn');
-        if (emptyShareBtn) {
-            emptyShareBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.shareList();
-                this.haptic('selection');
             });
         }
     }
