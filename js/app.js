@@ -385,9 +385,13 @@ class CollaborativeShoppingList {
         const cancelBtn = document.getElementById('cancel-btn');
         if (cancelBtn) {
             if (input.value.length > 0) {
-                cancelBtn.classList.add('visible');
+                if (!cancelBtn.classList.contains('visible')) {
+                    cancelBtn.classList.add('visible');
+                }
             } else {
-                cancelBtn.classList.remove('visible');
+                if (cancelBtn.classList.contains('visible')) {
+                    cancelBtn.classList.remove('visible');
+                }
             }
         }
     }
@@ -454,14 +458,23 @@ class CollaborativeShoppingList {
         
         modal.classList.remove('hidden');
         
-        // Кнопка "Копировать" — показывает уведомление
+        // Кнопка "Копировать"
         const copyBtn = document.getElementById('modal-copy-btn');
         copyBtn.onclick = async () => {
             await this.copyToClipboard(inviteLink);
+            // Анимация иконки копирования
+            const icon = modal.querySelector('.copy-icon svg');
+            if (icon) {
+                icon.style.transition = 'transform 0.3s ease';
+                icon.style.transform = 'scale(1.2) rotate(10deg)';
+                setTimeout(() => {
+                    icon.style.transform = 'scale(1) rotate(0)';
+                }, 300);
+            }
             this.showNotification('📋 Ссылка скопирована');
         };
         
-        // Кнопка "В чаты" — НЕ показывает уведомление при закрытии
+        // Кнопка "Отправить в чаты"
         const shareBtn = document.getElementById('share-modal-confirm');
         shareBtn.onclick = async () => {
             modal.classList.add('hidden');
@@ -482,13 +495,17 @@ class CollaborativeShoppingList {
                     }
                 }
             }
+            await this.copyToClipboard(inviteLink);
+            this.showNotification('📋 Ссылка скопирована');
         };
         
+        // Кнопка "Закрыть"
         const closeBtn = document.getElementById('share-modal-cancel');
         closeBtn.onclick = () => {
             modal.classList.add('hidden');
         };
         
+        // Закрытие по клику вне окна
         modal.onclick = (e) => {
             if (e.target === modal) {
                 modal.classList.add('hidden');
@@ -634,22 +651,25 @@ class CollaborativeShoppingList {
     }
 
     setupEventListeners() {
-        const addBtn = document.getElementById('add-btn');
-        if (addBtn) {
-            addBtn.addEventListener('click', () => this.addItem());
-        }
-
-        const cancelBtn = document.getElementById('cancel-btn');
-        if (cancelBtn) {
-            cancelBtn.addEventListener('click', () => this.cancelInput());
-        }
-
         const input = document.getElementById('item-input');
+        const cancelBtn = document.getElementById('cancel-btn');
+        
         if (input) {
             input.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') this.addItem();
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (input.value.trim()) {
+                        this.addItem();
+                    }
+
+                    input.blur();
+                }
             });
             input.addEventListener('input', () => this.updateCancelButton());
+        }
+        
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', () => this.cancelInput());
         }
 
         const mainContent = document.getElementById('main-content');
