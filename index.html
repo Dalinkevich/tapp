@@ -138,6 +138,14 @@
                 <span>Очистить</span>
             </button>
             
+            <!-- НОВАЯ КНОПКА: БАЗОВЫЙ СПИСОК -->
+            <button class="base-btn" id="base-btn" type="button">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                </svg>
+                <span>База</span>
+            </button>
+            
             <button class="share-btn" id="share-btn" type="button">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <circle cx="18" cy="5" r="3"></circle>
@@ -181,7 +189,6 @@
         <!-- ===== MODAL: SHARE LIST ===== -->
         <div class="modal hidden" id="share-modal">
             <div class="modal-content share-modal">
-                <!-- Анимированная иконка копирования -->
                 <div class="modal-icon copy-icon">
                     <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                         <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
@@ -192,7 +199,6 @@
                 <h3>Пригласить в список</h3>
                 <p>Отправьте приглашение другу, чтобы он мог добавлять товары вместе с вами</p>
                 
-                <!-- Три кнопки вертикально, одна под другой -->
                 <div class="modal-actions vertical">
                     <button class="modal-btn secondary" id="modal-copy-btn" type="button">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -215,6 +221,48 @@
                             <line x1="6" y1="6" x2="18" y2="18"></line>
                         </svg>
                         Закрыть
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== MODAL: BASE LIST MANAGER ===== -->
+        <div class="modal hidden" id="base-modal">
+            <div class="modal-content base-modal">
+                <div class="modal-icon gradient-icon">🗂️</div>
+                <h3>Базовый список</h3>
+                <p>Товары, которые вы покупаете регулярно</p>
+                
+                <!-- Поле добавления в базу -->
+                <div class="base-input-group">
+                    <input 
+                        type="text" 
+                        class="input-field base-input" 
+                        id="base-input" 
+                        placeholder="Добавить в базу..." 
+                        maxlength="50"
+                    >
+                    <button type="button" class="base-add-btn" id="base-add-btn" title="Добавить">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                    </button>
+                </div>
+                
+                <!-- Список базовых товаров -->
+                <div class="base-list-container" id="base-list-container">
+                    <!-- Генерируется через JS -->
+                </div>
+                
+                <!-- Кнопки действий -->
+                <div class="base-modal-actions">
+                    <button class="modal-btn secondary" id="base-close" type="button">
+                        Закрыть
+                    </button>
+                    <button class="modal-btn primary pulse" id="base-add-to-current" type="button">
+                        <span>✨ Добавить в список</span>
+                        <span class="base-counter" id="base-counter">(0)</span>
                     </button>
                 </div>
             </div>
