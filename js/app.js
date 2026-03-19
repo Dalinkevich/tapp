@@ -3,8 +3,8 @@ class CollaborativeShoppingList {
     this.tg = window.Telegram?.WebApp;
     this.isTelegram = !!this.tg;
     this.items = [];
-    this.baseItems = []; // Базовый список товаров
-    this.selectedBaseItems = new Set(); // Выбранные для добавления
+    this.baseItems = [];
+    this.selectedBaseItems = new Set(); 
     this.listId = null;
     this.userId = null;
     this.userName = null;
@@ -14,13 +14,11 @@ class CollaborativeShoppingList {
     this.connectedUsers = new Map();
     this.myPresenceInterval = null;
     this.isInitialized = false;
-    
     this.init();
   }
 
   async init() {
     console.log('Инициализация...');
-    
     if (!this.isTelegram) {
       console.log('Демо-режим');
       this.initDemoMode();
@@ -29,24 +27,24 @@ class CollaborativeShoppingList {
 
     this.tg.ready();
     this.tg.expand();
-    
+
     this.initUserData();
     console.log('Пользователь:', this.userName, this.userId);
-    
+
     this.checkInvitation();
     this.initTheme();
     this.setupEventListeners();
-    
+
     await this.loadOrCreateList();
     this.showShareInfo();
     await this.registerUser();
-    
+
     this.startRealtimeSync();
     this.startPresenceUpdates();
-    
+
     this.render();
     this.updateConnectionStatus();
-    
+
     this.isInitialized = true;
     console.log('Инициализация завершена');
   }
@@ -74,14 +72,13 @@ class CollaborativeShoppingList {
   showJoinModal() {
     const modal = document.getElementById('join-modal');
     if (!modal) return;
-    
     modal.classList.remove('hidden');
-    
+
     document.getElementById('modal-confirm').onclick = () => {
       this.joinList(this.pendingListId);
       modal.classList.add('hidden');
     };
-    
+
     document.getElementById('modal-cancel').onclick = () => {
       modal.classList.add('hidden');
       this.pendingListId = null;
@@ -99,13 +96,13 @@ class CollaborativeShoppingList {
     } catch (e) {
       console.log('Нет сохранённого списка');
     }
-
+    
     if (!this.listId) {
       this.createNewList();
     } else {
       await this.loadFromFirebase();
     }
-    
+
     await this.loadBaseItems();
   }
 
@@ -122,11 +119,10 @@ class CollaborativeShoppingList {
     this.listId = listId;
     this.pendingListId = null;
     this.saveListId();
-    
     await this.loadFromFirebase();
     await this.registerUser();
     await this.loadBaseItems(); 
-    
+
     this.showShareInfo();
     this.showNotification('👥 Вы присоединились к списку!');
     this.render();
@@ -138,13 +134,12 @@ class CollaborativeShoppingList {
       console.error('Невозможно зарегистрировать: нет listId или userId');
       return;
     }
-    
     const userData = {
       name: this.userName,
       joinedAt: Date.now(),
       lastActive: Date.now()
     };
-    
+
     try {
       const url = `${this.firebaseUrl}/lists/${this.listId}/users/${this.userId}.json`;
       console.log('Регистрация пользователя:', url, userData);
@@ -167,7 +162,6 @@ class CollaborativeShoppingList {
   startPresenceUpdates() {
     this.myPresenceInterval = setInterval(async () => {
       if (!this.listId || !this.userId) return;
-      
       try {
         await fetch(`${this.firebaseUrl}/lists/${this.listId}/users/${this.userId}/lastActive.json`, {
           method: 'PUT',
@@ -179,7 +173,6 @@ class CollaborativeShoppingList {
 
   async loadFromFirebase() {
     if (!this.listId) return;
-    
     try {
       const url = `${this.firebaseUrl}/lists/${this.listId}.json`;
       console.log('Загрузка из Firebase:', url);
@@ -214,17 +207,16 @@ class CollaborativeShoppingList {
 
   async saveToFirebase() {
     if (!this.listId) return;
-    
     const now = Date.now();
     this.lastSavedAt = now;
-    
+
     const updates = {
       items: this.items,
       updatedAt: now,
       updatedBy: this.userId,
       updatedByName: this.userName
     };
-    
+
     try {
       const url = `${this.firebaseUrl}/lists/${this.listId}.json`;
       await fetch(url, {
@@ -237,8 +229,7 @@ class CollaborativeShoppingList {
     }
   }
 
-  // ===== БАЗОВЫЙ СПИСОК=====
-  
+  // ===== БАЗОВЫЙ СПИСОК =====
   async loadBaseItems() {
     try {
       const key = `base_items_${this.listId}`;
@@ -247,7 +238,7 @@ class CollaborativeShoppingList {
         this.baseItems = JSON.parse(saved);
       } else {
         // Дефолтные товары для нового пользователя
-        this.baseItems = ['Молоко', ' Хлеб', 'Яйца'];
+        this.baseItems = ['Молоко', 'Хлеб', 'Яйца'];
         await this.saveBaseItems();
       }
     } catch (e) {
@@ -265,7 +256,6 @@ class CollaborativeShoppingList {
       } else {
         localStorage.setItem(key, data);
       }
-
       await this.syncBaseToFirebase();
     } catch (e) {
       console.error('Ошибка сохранения базы:', e);
@@ -289,10 +279,19 @@ class CollaborativeShoppingList {
     if (!modal) return;
     
     this.selectedBaseItems.clear();
+    const currentTexts = new Set(this.items.map(i => i.text.toLowerCase()));
+    
+    this.baseItems.forEach((text, index) => {
+      const isAlreadyAdded = currentTexts.has(text.toLowerCase());
+      if (!isAlreadyAdded) {
+        this.selectedBaseItems.add(index);
+      }
+    });
+    
     this.renderBaseList();
     modal.classList.remove('hidden');
     this.haptic('selection');
-    
+
     setTimeout(() => {
       document.getElementById('base-input')?.focus();
     }, 300);
@@ -312,28 +311,29 @@ class CollaborativeShoppingList {
       this.updateBaseCounter();
       return;
     }
-    
+
     const currentTexts = new Set(this.items.map(i => i.text.toLowerCase()));
-    
+
     container.innerHTML = this.baseItems.map((text, index) => {
       const isSelected = this.selectedBaseItems.has(index);
       const isAlreadyAdded = currentTexts.has(text.toLowerCase());
       
       return `
         <div class="base-item ${isSelected ? 'selected' : ''} ${isAlreadyAdded ? 'added' : ''}" 
-             data-index="${index}"
-             onclick="app.toggleBaseItem(${index})">
+            data-index="${index}"
+            onclick="app.toggleBaseItem(${index})">
           <div class="base-checkbox">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
               <polyline points="20 6 9 17 4 12"></polyline>
             </svg>
           </div>
           <span class="base-item-text">${this.escapeHtml(text)}</span>
+          ${isAlreadyAdded ? '<span class="base-item-added-badge">✓ в списке</span>' : ''}
           <button class="base-item-delete" onclick="app.deleteBaseItem(${index}, event)" title="Удалить из базы">×</button>
         </div>
       `;
     }).join('');
-    
+
     this.updateBaseCounter();
   }
 
@@ -350,14 +350,13 @@ class CollaborativeShoppingList {
   deleteBaseItem(index, event) {
     event.stopPropagation();
     const item = this.baseItems[index];
-    
     const elements = document.querySelectorAll(`.base-item[data-index="${index}"]`);
     elements.forEach(el => {
       el.style.transition = 'all 0.3s ease';
       el.style.opacity = '0';
       el.style.transform = 'translateX(50px) scale(0.8)';
     });
-    
+
     setTimeout(() => {
       this.baseItems.splice(index, 1);
       this.selectedBaseItems.delete(index);
@@ -381,7 +380,6 @@ class CollaborativeShoppingList {
       this.showNotification('⚠️ Выберите товары');
       return;
     }
-    
     const added = [];
     for (let index of this.selectedBaseItems) {
       const text = this.baseItems[index];
@@ -398,7 +396,7 @@ class CollaborativeShoppingList {
         added.push(text);
       }
     }
-    
+
     if (added.length > 0) {
       await this.saveToFirebase();
       this.haptic('success');
@@ -416,19 +414,18 @@ class CollaborativeShoppingList {
   async addToBase(text) {
     const trimmed = text.trim();
     if (!trimmed) return;
-    
     if (this.baseItems.includes(trimmed)) {
       this.showNotification('✅ Уже в базовом');
       return;
     }
-    
+
     this.baseItems.push(trimmed);
     await this.saveBaseItems();
-    
+
     this.renderBaseList();
     this.haptic('success');
     this.showNotification('📦 Добавлено в базовый');
-    
+
     const input = document.getElementById('base-input');
     if (input) input.value = '';
   }
@@ -443,7 +440,6 @@ class CollaborativeShoppingList {
   startRealtimeSync() {
     setInterval(async () => {
       if (!this.listId) return;
-      
       try {
         const response = await fetch(`${this.firebaseUrl}/lists/${this.listId}.json`);
         const data = await response.json();
@@ -520,16 +516,15 @@ class CollaborativeShoppingList {
   updateUsersList() {
     const usersListEl = document.getElementById('users-list');
     if (!usersListEl) return;
-    
     const otherUsers = [];
     for (let [id, user] of this.connectedUsers) {
       if (id !== this.userId && user.name) {
         otherUsers.push(user.name);
       }
     }
-    
+
     console.log('Обновление списка пользователей:', otherUsers);
-    
+
     if (otherUsers.length > 0) {
       usersListEl.textContent = otherUsers.join(', ');
     } else {
@@ -561,9 +556,8 @@ class CollaborativeShoppingList {
   async addItem() {
     const input = document.getElementById('item-input');
     const text = input.value.trim();
-    
     if (!text) return;
-    
+
     const item = {
       id: Date.now().toString(),
       text: text,
@@ -572,11 +566,11 @@ class CollaborativeShoppingList {
       addedByName: this.userName,
       addedAt: Date.now()
     };
-    
+
     this.items.unshift(item);
     await this.saveToFirebase();
     input.value = '';
-    
+
     this.haptic('light');
     this.render();
     this.updateCancelButton();
@@ -619,7 +613,6 @@ class CollaborativeShoppingList {
       item.purchased = !item.purchased;
       item.purchasedBy = item.purchased ? this.userId : null;
       item.purchasedByName = item.purchased ? this.userName : null;
-      
       await this.saveToFirebase();
       this.haptic(item.purchased ? 'medium' : 'light');
       this.render();
@@ -636,16 +629,15 @@ class CollaborativeShoppingList {
 
   async clearAll() {
     if (this.items.length === 0) return;
-    
     const modal = document.getElementById('clear-modal');
     if (!modal) return;
-    
+
     modal.classList.remove('hidden');
-    
+
     document.getElementById('clear-cancel').onclick = () => {
       modal.classList.add('hidden');
     };
-    
+
     document.getElementById('clear-confirm').onclick = async () => {
       modal.classList.add('hidden');
       this.items = [];
@@ -653,7 +645,7 @@ class CollaborativeShoppingList {
       this.haptic('success');
       this.render();
     };
-    
+
     modal.onclick = (e) => {
       if (e.target === modal) {
         modal.classList.add('hidden');
@@ -666,15 +658,14 @@ class CollaborativeShoppingList {
       this.showNotification('❌ Сначала добавьте товар');
       return;
     }
-
     const botUsername = 'perdakluv_bot';
     const inviteLink = `https://t.me/${botUsername}?startapp=${this.listId}`;
-    
+
     const modal = document.getElementById('share-modal');
     if (!modal) return;
-    
+
     modal.classList.remove('hidden');
-    
+
     const copyBtn = document.getElementById('modal-copy-btn');
     copyBtn.onclick = async () => {
       await this.copyToClipboard(inviteLink);
@@ -686,9 +677,9 @@ class CollaborativeShoppingList {
           icon.style.transform = 'scale(1) rotate(0)';
         }, 300);
       }
-      this.showNotification('📋 Ссылка скопирована');
+      this.showNotification('📋 Ссылка скопирована'); 
     };
-    
+
     const shareBtn = document.getElementById('share-modal-confirm');
     shareBtn.onclick = async () => {
       modal.classList.add('hidden');
@@ -707,17 +698,18 @@ class CollaborativeShoppingList {
             await this.copyToClipboard(inviteLink);
             this.showNotification('📋 Ссылка скопирована');
           }
+          return;
         }
       }
       await this.copyToClipboard(inviteLink);
       this.showNotification('📋 Ссылка скопирована');
     };
-    
+
     const closeBtn = document.getElementById('share-modal-cancel');
     closeBtn.onclick = () => {
       modal.classList.add('hidden');
     };
-    
+
     modal.onclick = (e) => {
       if (e.target === modal) {
         modal.classList.add('hidden');
@@ -755,36 +747,35 @@ class CollaborativeShoppingList {
   render() {
     const listContainer = document.getElementById('shopping-list');
     const emptyState = document.getElementById('empty-state');
-    
     if (!listContainer || !emptyState) return;
-    
+
     if (this.items.length === 0) {
       listContainer.classList.add('hidden');
       emptyState.classList.remove('hidden');
       this.updateProgress();
       return;
     }
-    
+
     listContainer.classList.remove('hidden');
     emptyState.classList.add('hidden');
-    
+
     const sortedItems = [...this.items].sort((a, b) => {
       if (a.purchased !== b.purchased) return a.purchased ? 1 : -1;
       return b.addedAt - a.addedAt;
     });
-    
+
     listContainer.innerHTML = sortedItems.map(item => this.renderItem(item)).join('');
     this.updateProgress();
   }
 
   renderItem(item) {
-    const whoAdded = item.addedByName && item.addedBy !== this.userId 
+    const whoAdded = item.addedByName && item.addedBy !== this.userId
       ? `<span class="item-meta">добавил ${item.addedByName}</span>` 
       : '';
     const whoPurchased = item.purchased && item.purchasedByName && item.purchasedBy !== this.userId
-      ? `<span class="item-meta purchased-by">взял ${item.purchasedByName}</span>`
+      ? `<span class="item-meta purchased-by">взял ${item.purchasedByName}</span>` 
       : '';
-    
+      
     return `
       <div class="item ${item.purchased ? 'purchased' : ''}" onclick="app.toggleItem('${item.id}')">
         <div class="checkbox">
@@ -805,13 +796,12 @@ class CollaborativeShoppingList {
   updateProgress() {
     const progressText = document.getElementById('progress-text');
     const progressBar = document.getElementById('progress-bar');
-    
     if (!progressText || !progressBar) return;
-    
+
     const total = this.items.length;
     const purchased = this.items.filter(i => i.purchased).length;
     const percent = total > 0 ? (purchased / total) * 100 : 0;
-    
+
     progressText.textContent = `${purchased} из ${total} куплено`;
     progressBar.style.width = `${percent}%`;
   }
@@ -838,7 +828,6 @@ class CollaborativeShoppingList {
     notif.className = 'notification';
     notif.textContent = message;
     document.body.appendChild(notif);
-    
     setTimeout(() => {
       notif.classList.add('fade-out');
       setTimeout(() => notif.remove(), 300);
@@ -848,24 +837,22 @@ class CollaborativeShoppingList {
   initTheme() {
     if (!this.tg) return;
     this.tg.setHeaderColor(this.tg.colorScheme === 'dark' ? '#1c1c1e' : '#ffffff');
-    
     const theme = this.tg.themeParams || {};
     const root = document.documentElement;
-    
+
     if (theme.bg_color) root.style.setProperty('--tg-theme-bg-color', theme.bg_color);
     if (theme.text_color) root.style.setProperty('--tg-theme-text-color', theme.text_color);
     if (theme.hint_color) root.style.setProperty('--tg-theme-hint-color', theme.hint_color);
     if (theme.button_color) root.style.setProperty('--tg-theme-button-color', theme.button_color);
     if (theme.button_text_color) root.style.setProperty('--tg-theme-button-text-color', theme.button_text_color);
     if (theme.secondary_bg_color) root.style.setProperty('--tg-theme-secondary-bg-color', theme.secondary_bg_color);
-    
+
     document.body.setAttribute('data-theme', this.tg.colorScheme || 'light');
   }
 
   setupEventListeners() {
     const input = document.getElementById('item-input');
     const cancelBtn = document.getElementById('cancel-btn');
-    
     if (input) {
       input.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
@@ -878,7 +865,7 @@ class CollaborativeShoppingList {
       });
       input.addEventListener('input', () => this.updateCancelButton());
     }
-    
+
     if (cancelBtn) {
       cancelBtn.addEventListener('click', () => this.cancelInput());
     }
@@ -913,7 +900,7 @@ class CollaborativeShoppingList {
       themeBtn.addEventListener('click', () => {
         const current = document.body.getAttribute('data-theme');
         document.body.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
-        this.haptic('selection');
+        this.haptic('selection'); 
       });
     }
 
@@ -934,8 +921,6 @@ class CollaborativeShoppingList {
       });
     }
 
-    // ===== НОВЫЕ ОБРАБОТЧИКИ ДЛЯ БАЗОВОГО СПИСКА =====
-    
     const baseBtn = document.getElementById('base-btn');
     if (baseBtn) {
       baseBtn.addEventListener('click', (e) => {
@@ -943,7 +928,7 @@ class CollaborativeShoppingList {
         this.openBaseModal();
       });
     }
-    
+
     const baseModal = document.getElementById('base-modal');
     if (baseModal) {
       document.getElementById('base-close')?.addEventListener('click', () => {
@@ -983,7 +968,7 @@ class CollaborativeShoppingList {
   initDemoMode() {
     this.listId = 'demo_' + Date.now();
     this.items = [];
-    this.baseItems = ['🥛 Молоко', '🍞 Хлеб', '🥚 Яйца', '🧈 Масло'];
+    this.baseItems = ['Молоко', 'Хлеб', 'Яйца'];
     this.lastUpdate = Date.now();
     this.lastSavedAt = 0;
     this.showShareInfo();

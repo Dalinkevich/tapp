@@ -17,17 +17,17 @@
   --gradient-danger: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%);
   --gradient-accent: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
   --gradient-dark: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-
+  
   --radius-lg: 24px;
   --radius-xl: 32px;
   --radius-pill: 9999px;
-
+  
   --shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.08);
   --shadow-float: 0 12px 40px rgba(0, 0, 0, 0.15);
   --shadow-glow: 0 0 25px rgba(102, 126, 234, 0.5);
   --shadow-glow-light: 0 0 25px rgba(102, 126, 234, 0.25);
   --shadow-glow-strong: 0 0 35px rgba(102, 126, 234, 0.7);
-
+  
   --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   --transition-smooth: 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   --transition-bounce: 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
@@ -1003,9 +1003,10 @@ body::before {
 
 .base-modal .modal-icon.gradient-icon {
   font-size: 52px;
-  background: var(--gradient-primary);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  background: none !important;
+  -webkit-text-fill-color: var(--tg-theme-text-color) !important;
+  color: var(--tg-theme-text-color);
+  opacity: 0.9;
   animation: iconFloat 2.5s ease-in-out infinite;
 }
 
@@ -1032,30 +1033,7 @@ body::before {
 }
 
 .base-add-btn {
-  width: 52px;
-  height: 52px;
-  border: none;
-  border-radius: var(--radius-pill);
-  background: var(--gradient-success);
-  color: white;
-  cursor: pointer;
-  transition: var(--transition-bounce);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 15px rgba(17, 153, 142, 0.4);
-  flex-shrink: 0;
-}
-
-.base-add-btn:active {
-  transform: scale(0.9) rotate(90deg);
-  box-shadow: 0 6px 20px rgba(17, 153, 142, 0.6);
-}
-
-.base-add-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  transform: none;
+  display: none;
 }
 
 .base-list-container {
@@ -1125,6 +1103,23 @@ body::before {
 .base-item.selected {
   background: rgba(102, 126, 234, 0.12);
   border: 1px solid rgba(102, 126, 234, 0.3);
+}
+
+/* Стили для уже добавленных товаров */
+.base-item.added {
+  opacity: 0.6;
+}
+
+.base-item.added .base-item-text {
+  text-decoration: line-through;
+  color: var(--tg-theme-hint-color);
+}
+
+.base-item-added-badge {
+  font-size: 10px;
+  color: #38ef7d;
+  font-weight: 600;
+  margin-left: 8px;
 }
 
 .base-checkbox {
@@ -1305,8 +1300,8 @@ body::before {
 /* ===== TOUCH FEEDBACK ===== */
 @media (hover: none) {
   .item:active, .share-btn:active,
-  .clear-btn:active, .modal-btn:active, .base-btn:active { 
-    transform: scale(0.98); 
+  .clear-btn:active, .modal-btn:active, .base-btn:active {
+    transform: scale(0.98);
   }
 }
 
